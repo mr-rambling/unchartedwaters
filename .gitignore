@@ -5,6 +5,7 @@ build/
 dist/
 wheels/
 *.egg-info
+example_pygame_gui/
 
 # Virtual environments
 .venv

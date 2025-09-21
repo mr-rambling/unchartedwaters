@@ -1,51 +1,133 @@
-from cities import Cities, City
+from cities import Cities, City, cities
 from player import Player
+from constants import *
+import pygame
+import pygame_gui
+import sys
 
 class World:
     def __init__(self):
         self.cities = Cities()
-        self.cities.add_city(City("Viremontis", 
-                        (0, 0),
-                        0, 
-                        120000, 
-                        ["The Great Library", "Viremontis Castle", "The Crystal Lake"])
-                    )
-        self.cities.add_city(City("Serathorne", 
-                            (0, 98),
-                            1, 
-                            95000, 
-                            ["The Serpent's Fountain", "Serathorne Cathedral", "The Whispering Woods"])
-                        )
-        self.cities.add_city(City("Draymoor", 
-                            (-32, 50),
-                            2, 
-                            80000, 
-                            ["The Draymoor Keep", "The Misty Marshes", "The Ancient Oak"])
-                        )
-        self.cities.add_city(City("Caldrith Vale", 
-                            (-16, 75),
-                            3, 
-                            72000, 
-                            ["The Caldrith Falls", "The Enchanted Glade", "The Ancient Ruins"])
-                        )
-        self.cities.add_city(City("Nex Hollow", 
-                            (-86, 42),
-                            4, 
-                            65000, 
-                            ["The Shadowed Glade", "Nex Hollow Caverns", "The Whispering Falls"])
-                        )
+        for city in cities:
+            self.cities.add_city(city)
 
         self.cities.get_city("Viremontis").add_product("Magical Tomes", 10, 1.2)
+
+class Options():
+    def __init__(self):
+        self.resolution = (SCREEN_HEIGHT, SCREEN_WIDTH)
+        self.fullscreen = False
+
+class Stage():
+    def __init__(self, screen):
+        self.screen = screen
+        self.clock = pygame.time.Clock()
+        self.is_running = False
+        self.manager = pygame_gui.UIManager((SCREEN_WIDTH, SCREEN_HEIGHT))
+        self.background = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
+        self.background.fill((60,25,60))
+
+    def objects(self):
+        pass
+
+    def handle_event(self, event):
+        pass
+
+    def mainloop(self):
+        self.is_running = True
+        self.objects()
+
+        while self.is_running:
+            time_delta = self.clock.tick(60)/1000.0
+            for event in pygame.event.get(): 
+                if event.type == pygame.QUIT:
+                    self.is_running = False
+                    pygame.quit()
+                    sys.exit()
+            
+                self.handle_event(event)
+
+                self.manager.process_events(event)
+
+            self.manager.update(time_delta)
+
+            self.screen.blit(self.background, (0,0))
+            self.manager.draw_ui(self.screen)
+
+            # updates the frames of the game
+            pygame.display.update()            
+
+
+class StartScreen(Stage):
+    def __init__(self, screen):
+        super().__init__(screen)
+
+    def objects(self):
+        self.welcome_text = pygame_gui.elements.UITextBox(html_text=f'Welcome to {GAME_NAME}!',
+                                                    relative_rect=pygame.Rect(0, 100, 400, 100),
+                                                    manager=self.manager,
+                                                    anchors={'centerx': 'centerx'})
+
+        self.new_game_button = pygame_gui.elements.UIButton(relative_rect=pygame.Rect((0,275), (100, 50)),
+                                                    text = 'New Game',
+                                                    manager=self.manager,
+                                                    anchors={'centerx': 'centerx'})    
+        self.load_game_button = pygame_gui.elements.UIButton(relative_rect=pygame.Rect((0,20), (100, 50)),
+                                                    text = 'Load Game',
+                                                    manager=self.manager,
+                                                    anchors={'centerx': 'centerx',
+                                                            'top_target': self.new_game_button})    
+        self.settings_button = pygame_gui.elements.UIButton(relative_rect=pygame.Rect((0,20), (100, 50)),
+                                                    text = 'Settings',
+                                                    manager=self.manager,
+                                                    anchors={'centerx': 'centerx',
+                                                            'top_target': self.load_game_button})
+        self.exit_button = pygame_gui.elements.UIButton(relative_rect=pygame.Rect((0,20), (100, 50)),
+                                                    text = 'Exit',
+                                                    manager=self.manager,
+                                                    anchors={'centerx': 'centerx',
+                                                            'top_target': self.settings_button})
+        
+    def handle_event(self, event):
+        if event.type == pygame_gui.UI_BUTTON_PRESSED:
+            if event.ui_element == self.new_game_button:
+                print('New Game')
+            if event.ui_element == self.load_game_button:
+                print('Load Game')
+            if event.ui_element == self.settings_button:
+                print('Settings')
+                SettingsScreen(self.screen, self.manager).mainloop()
+            if event.ui_element == self.exit_button:
+                self.is_running = False   
+
+class SettingsScreen(Stage):
+    def __init__(self, screen):
+        super().__init__(screen)
+
+    def objects(self):
+        self.resolution = pygame_gui.elements.UIDropDownMenu(options_list=['640x480', '800x600', '1024x768', '1280x720'],
+                                                            starting_option='1280x720',
+                                                            relative_rect=pygame.Rect((500,400),(200, 30)),
+                                                            manager=self.manager)  
+
+def main_n():
+    pygame.init()
+    pygame.display.set_caption('Trader')
+    options = Options()
+    screen = pygame.display.set_mode(options.resolution)
+
+    StartScreen(screen).mainloop()
+
 
 def main():
     world = World()
     print("Hello from unchartedwaters!")
     player = Player("Hero")
     player.location = world.cities.get_city("Viremontis")
-    print(f"Welcome {player.name}! You have {player.currency} gold.")
     print(f"You are currently in {player.location.name}.")
 
     while True:
+        print(f"You have {player.currency} gold.")
         print("What would you like to do?")
         print("1. Visit Shop")
         print("2. Check Inventory")
@@ -53,7 +135,7 @@ def main():
         print("4. Leave City")
         choice = input("Enter your choice: ")
         if choice == "1":
-            shop(player.location)
+            shop(player)
         elif choice == "2":
             print("Your inventory:")
             for item in player.get_inventory():
@@ -69,25 +151,30 @@ def main():
             print("Invalid choice.")
         print("--------------------")
 
-def shop(city):
-    print("Welcome to the shop!")
+def shop(player):
+    city = player.location
+    print("\nWelcome to the shop!")
     print("Available products:")
     for product, details in city.get_products().items():
-        print(f"{product}: {details['price']} gold (Stock: {details['stock']})")
+        print(f"{product}: {details['price']} gold (Stock: {details['qty']})")
     print("What would you like to do?")
     print("1. Buy Product")
     print("2. Sell Product")
     choice = input("Enter your choice: ")
     if choice == "1":
         product = input("Enter the product name: ")
+        if product not in city.get_products():
+            print('Invalid choice')
+            return
         qty = int(input("Enter the quantity: "))
-        city.buy_product(product, qty)
+        city.sell_product(player, product, qty)
     elif choice == "2":
+        print(f'You have {player.get_cargo()}')
         product = input("Enter the product name: ")
         qty = int(input("Enter the quantity: "))
-        city.sell_product(product, qty)
+        city.sell_product(player, product, qty)
     else:
         print("Invalid choice.")
 
 if __name__ == "__main__":
-    main()
+    main_n()
