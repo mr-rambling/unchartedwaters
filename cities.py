@@ -2,11 +2,9 @@ from goods import GoodsCatalog, trade_goods
 from player import Player
 
 class City():
-    def __init__(self, name, location, index, population, landmarks):
+    def __init__(self, name, location, landmarks):
         self.name = name
         self.location = location
-        self.index = index
-        self.population = population
         self.landmarks = landmarks
         self.products = {}
 
@@ -69,32 +67,22 @@ class Cities:
     
 cities = []
 cities.append(City("Viremontis", 
-                    (0, 0),
-                    0, 
-                    120000, 
+                    (0, 0), 
                     ["The Great Library", "Viremontis Castle", "The Crystal Lake"])
 )
 cities.append(City("Serathorne", 
                     (0, 98),
-                    1, 
-                    95000, 
                     ["The Serpent's Fountain", "Serathorne Cathedral", "The Whispering Woods"])
 )
 cities.append(City("Draymoor", 
                     (-32, 50),
-                    2, 
-                    80000, 
                     ["The Draymoor Keep", "The Misty Marshes", "The Ancient Oak"])
 )
 cities.append(City("Caldrith Vale", 
                     (-16, 75),
-                    3, 
-                    72000, 
                     ["The Caldrith Falls", "The Enchanted Glade", "The Ancient Ruins"])
 )
 cities.append(City("Nex Hollow", 
                     (-86, 42),
-                    4, 
-                    65000, 
                     ["The Shadowed Glade", "Nex Hollow Caverns", "The Whispering Falls"])
 )

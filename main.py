@@ -4,9 +4,13 @@ from constants import *
 import pygame
 import pygame_gui
 import sys
+from pygame_gui.elements.ui_window import UIWindow
+from pygame_gui.elements.ui_label import UILabel
+from pygame_gui.elements.ui_text_entry_line import UITextEntryLine
+from typing import Dict
 
 # placeholder player
-player = Player('Temp Name')
+player = Player('I was too lazy to change from Default')
 
 # This is questionable, might need to rework how cities work
 # In fact, I should with the new screen based architecture
@@ -25,9 +29,10 @@ class Options():
         self.fullscreen = False
 
 # Template for all further Screens
-# Realistically just the settings screen as GameScreen rebuilds most of it
+# Realistically just SettingsScreen and NewGameScreen screen as GameScreen rebuilds most of it
 class Stage():
     def __init__(self, screen):
+        self.pos = (0,0)
         self.screen = screen
         self.clock = pygame.time.Clock()
         self.is_running = False
@@ -59,75 +64,14 @@ class Stage():
 
             self.manager.update(time_delta)
 
-            self.screen.blit(self.background, (0,0))
+            self.screen.blit(self.background, self.pos)
             self.manager.draw_ui(self.screen)
 
             # updates the frames of the game
             pygame.display.update()            
 
-# Need to add player sidebar for stats/cargo to this
-class GameScreen(Stage):
-    def __init__(self, screen):
-        super().__init__(screen)
-        self.char_sheet_width = 500
-        self.char_sheet_topleft = SCREEN_WIDTH - self.char_sheet_width
-
-        self.manager = pygame_gui.UIManager((self.char_sheet_topleft, SCREEN_HEIGHT)) # Need to add scaling here
-        self.char_sheet = pygame_gui.UIManager((self.char_sheet_width, SCREEN_HEIGHT))
-        self.char_sheet.get_root_container().get_rect().topleft = (self.char_sheet_topleft, 0)
-
-        self.background = pygame.Surface((self.char_sheet_topleft, SCREEN_HEIGHT))        
-        self.background.fill((60,25,60))
-        self.char_bg = pygame.Surface((self.char_sheet_width, SCREEN_HEIGHT))
-        self.char_bg.fill((60,25,50))
-        pygame.draw.line(self.char_bg, pygame.Color('black'), (0,0), (1, SCREEN_HEIGHT), 1)
-
-    def mainloop(self):
-        self.is_running = True
-        self.objects()
-        self.player_objects()
-
-        while self.is_running:
-            time_delta = self.clock.tick(60)/1000.0
-            for event in pygame.event.get(): 
-                if event.type == pygame.QUIT:
-                    self.is_running = False
-                    pygame.quit()
-                    sys.exit()
-            
-                self.handle_event(event)
-
-                self.manager.process_events(event)
-
-            self.manager.update(time_delta)
-            self.char_sheet.update(time_delta)
-
-            self.screen.blit(self.background, (0,0))
-            self.screen.blit(self.char_bg, (self.char_sheet_topleft,0))
-            self.manager.draw_ui(self.screen)
-            self.char_sheet.draw_ui(self.screen)
-
-            # updates the frames of the game
-            pygame.display.update()   
-
-    def player_objects(self):
-        self.player_name = pygame_gui.elements.UITextBox(html_text=f'{player.name}',
-                                                    relative_rect=pygame.Rect(0, 25, 400, 50),
-                                                    manager=self.char_sheet,
-                                                    anchors={'centerx': 'centerx'})
-        self.location = pygame_gui.elements.UITextBox(html_text=f'Current City: {player.location}',
-                                                    relative_rect=pygame.Rect(0, 25, 400, 50),
-                                                    manager=self.char_sheet,
-                                                    anchors={'centerx': 'centerx',
-                                                             'top_target': self.player_name})
-        self.currency = pygame_gui.elements.UITextBox(html_text=f'Gold: {player.currency}',
-                                                    relative_rect=pygame.Rect(0, 25, 400, 50),
-                                                    manager=self.char_sheet,
-                                                    anchors={'centerx': 'centerx',
-                                                             'top_target': self.location})
-
-# Need to add proper destination screen for new and load buttons. 
-# New currently just points to an empty GameScreen
+# Need to figure out load mechanics. 
+# Load is currently non-functional
 class StartScreen(Stage):
     def __init__(self, screen):
         super().__init__(screen)
@@ -161,11 +105,50 @@ class StartScreen(Stage):
         if event.type == pygame_gui.UI_BUTTON_PRESSED:
             if event.ui_element == self.new_game_button:
                 print('New Game')
-                CityScreen(self.screen).mainloop()
+                NewGameScreen(self.screen).mainloop()
             if event.ui_element == self.load_game_button:
                 print('Load Game')
             if event.ui_element == self.settings_button:
                 SettingsScreen(self.screen).mainloop()
+            if event.ui_element == self.exit_button:
+                self.is_running = False   
+                pygame.quit()
+                sys.quit()
+
+# Could add an option here for starting city
+class NewGameScreen(Stage):
+    def __init__(self, screen):
+        super().__init__(screen)
+
+    def objects(self):
+        self.welcome_text = pygame_gui.elements.UITextBox(html_text=f'Insert lore here',
+                                                    relative_rect=pygame.Rect(0, 100, 400, 100),
+                                                    manager=self.manager,
+                                                    anchors={'centerx': 'centerx'})
+        self.player_name = pygame_gui.elements.UITextEntryLine(placeholder_text='What is your name?',
+                                                    relative_rect=pygame.Rect(0, 50, 400, 50),
+                                                    manager=self.manager,
+                                                    anchors={'centerx': 'centerx',
+                                                             'top_target': self.welcome_text}) 
+        self.confirm_button = pygame_gui.elements.UIButton(relative_rect=pygame.Rect((0,20), (200, 50)),
+                                                    text = 'Create Character',
+                                                    manager=self.manager,
+                                                    anchors={'centerx': 'centerx',
+                                                            'top_target': self.player_name})
+        self.exit_button = pygame_gui.elements.UIButton(relative_rect=pygame.Rect((0,20), (100, 50)),
+                                                    text = 'Back',
+                                                    manager=self.manager,
+                                                    anchors={'centerx': 'centerx',
+                                                            'top_target': self.confirm_button})
+
+    def handle_event(self, event):
+        if event.type == pygame_gui.UI_BUTTON_PRESSED:
+            if event.ui_element == self.confirm_button:
+                self.is_running = False
+                if self.player_name.text != '':
+                    global player 
+                    player = Player(f'{self.player_name.text}')
+                CityScreen(self.screen).mainloop()
             if event.ui_element == self.exit_button:
                 self.is_running = False   
 
@@ -190,33 +173,134 @@ class SettingsScreen(Stage):
             if event.ui_element == self.exit_button:
                 self.is_running = False
 
+class GameScreen(Stage):
+    def __init__(self, screen):
+        super().__init__(screen)
+        self.manager = pygame_gui.UIManager((SCREEN_WIDTH, SCREEN_HEIGHT)) # Need to add scaling here
+        self.background = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))        
+        self.background.fill((60,25,60))
+        self.inventory = None
+        self.cargo = None
+        self.char_sheet = None
+
+    def objects(self):
+        self.inventory_button = pygame_gui.elements.UIButton(relative_rect=pygame.Rect((-150,20), (100, 30)),
+                                                    text = 'Inventory',
+                                                    manager=self.manager,
+                                                    anchors={'right':'right'})
+        self.cargo_button = pygame_gui.elements.UIButton(relative_rect=pygame.Rect((-100,20), (100, 30)),
+                                                    text = 'Cargo',
+                                                    manager=self.manager,
+                                                    anchors={'right':'right',
+                                                             'right_target':self.inventory_button})
+        self.character_button = pygame_gui.elements.UIButton(relative_rect=pygame.Rect((-100,20), (100, 30)),
+                                                    text = 'Character',
+                                                    manager=self.manager,
+                                                    anchors={'right':'right',
+                                                             'right_target':self.cargo_button})
+        self.currency = pygame_gui.elements.UILabel(text=f'Gold: {player.currency}',
+                                                    relative_rect=pygame.Rect((50, 25), (100, 25)),
+                                                    manager=self.manager,
+                                                    anchors={'left': 'left'})
+        self.player_health = pygame_gui.elements.UIScreenSpaceHealthBar(relative_rect=pygame.Rect((50, 25), (200, 25)),
+                                                                        manager=self.manager,
+                                                                        anchors={'left': 'left',
+                                                                        'top_target': self.currency})
+        self.player_energy = pygame_gui.elements.UIScreenSpaceHealthBar(relative_rect=pygame.Rect((50, 25), (200, 25)),
+                                                                        manager=self.manager,
+                                                                        anchors={'left': 'left',
+                                                                        'top_target': self.player_health})
+        self.player_energy.bar_filled_colour = 'blue'
+
+        
+    def handle_event(self, event):
+        if self.inventory and self.inventory.is_active:
+            self.inventory.handle_event(event)
+        if self.cargo and self.cargo.is_active:
+            self.cargo.handle_event(event)   
+        if event.type == pygame_gui.UI_BUTTON_PRESSED:
+            if event.ui_element == self.inventory_button:
+                self.inventory = InvScreen('Inventory', self.manager, INV_SCREEN)
+                self.inventory.is_active = True
+            if event.ui_element == self.cargo_button:
+                self.cargo = CargoScreen('Cargo', self.manager, INV_SCREEN)
+                self.cargo.is_active = True   
+            if event.ui_element == self.character_button:         
+                self.char_sheet = CharScreen('Character', self.manager, CHAR_SHEET_SIZE)   
+                self.char_sheet.is_active = True
+
+    def update_gold(self):
+        self.currency.set_text(f'Gold: {player.currency}')
+
+    def mainloop(self):
+        self.is_running = True
+        self.objects()
+
+        while self.is_running:
+            time_delta = self.clock.tick(60)/1000.0
+            for event in pygame.event.get(): 
+                if event.type == pygame.QUIT:
+                    self.is_running = False
+                    pygame.quit()
+                    sys.exit()
+        
+                self.handle_event(event)
+                self.manager.process_events(event)    
+
+            self.manager.update(time_delta)
+            self.update_gold()
+            self.screen.blit(self.background, (0,0))
+            self.manager.draw_ui(self.screen)
+
+            # updates the frames of the game
+            pygame.display.update()   
+
+# Save button is not linked to anything
 class CityScreen(GameScreen):
     def __init__(self, screen, city = 'Launceston'):
         super().__init__(screen)
         self.city = city
 
     def objects(self):
+        super().objects()
         self.NPC_speech = pygame_gui.elements.UITextBox(html_text=f'Welcome to {self.city}!',
                                                     relative_rect=pygame.Rect(0, 100, 400, 100),
                                                     manager=self.manager,
                                                     anchors={'centerx': 'centerx'})
-        self.market_button = pygame_gui.elements.UIButton(relative_rect=pygame.Rect((0,275), (100, 50)),
+        self.market_button = pygame_gui.elements.UIButton(relative_rect=pygame.Rect((0,275), (300, 50)),
                                                     text = 'Market',
                                                     manager=self.manager,
                                                     anchors={'centerx': 'centerx'})    
-        self.port_button = pygame_gui.elements.UIButton(relative_rect=pygame.Rect((0,20), (100, 50)),
+        self.port_button = pygame_gui.elements.UIButton(relative_rect=pygame.Rect((0,20), (300, 50)),
                                                     text = 'Port',
                                                     manager=self.manager,
                                                     anchors={'centerx': 'centerx',
                                                             'top_target': self.market_button})
+        self.save_button = pygame_gui.elements.UIButton(relative_rect=pygame.Rect((0,20), (300, 50)),
+                                                    text = 'Save Game',
+                                                    manager=self.manager,
+                                                    anchors={'centerx': 'centerx',
+                                                            'top_target': self.port_button})
+        self.exit_button = pygame_gui.elements.UIButton(relative_rect=pygame.Rect((0,20), (300, 50)),
+                                                    text = 'Quit',
+                                                    manager=self.manager,
+                                                    anchors={'centerx': 'centerx',
+                                                            'top_target': self.save_button})
 
     def handle_event(self, event):
+        super().handle_event(event)
         if event.type == pygame_gui.UI_BUTTON_PRESSED:
             if event.ui_element == self.market_button:
                 ShopScreen(self.screen, self.city).mainloop()
             if event.ui_element == self.port_button:
                 self.is_running = False
-                PortScreen(self.screen).mainloop()       
+                PortScreen(self.screen).mainloop()    
+            if event.ui_element == self.save_button:
+                pass
+            if event.ui_element == self.exit_button:
+                self.is_running = False
+                pygame.quit()
+                sys.exit()
 
 # Need to add shop inventory to this screen
 class ShopScreen(GameScreen):   
@@ -225,6 +309,7 @@ class ShopScreen(GameScreen):
         self.city = city
 
     def objects(self):
+        super().objects()
         self.NPC_speech = pygame_gui.elements.UITextBox(html_text=f'Welcome to {GAME_NAME}!',
                                                     relative_rect=pygame.Rect(0, 100, 400, 100),
                                                     manager=self.manager,
@@ -245,28 +330,246 @@ class ShopScreen(GameScreen):
                                                             'top_target': self.sell_button})              
 
     def handle_event(self, event):
+        super().handle_event(event)
         if event.type == pygame_gui.UI_BUTTON_PRESSED:
             if event.ui_element == self.buy_button:
-                SellScreen(self.screen, self.city).mainloop()
-            if event.ui_element == self.sell_button:
                 BuyScreen(self.screen, self.city).mainloop()
+            if event.ui_element == self.sell_button:
+                SellScreen(self.screen, self.city).mainloop()
             if event.ui_element == self.exit_button: 
                 self.is_running = False       
 
-# This needs to be built
 class SellScreen(GameScreen):
     def __init__(self, screen, city):
         super().__init__(screen)
+
+        self.labels: Dict[str, UILabel] = {}
+        self.entries: Dict[str, UITextEntryLine] = {}
+
+    def objects(self):
+        super().objects()
+        vertical_pos = 100 
+
+        for item in player.cargo:
+            vertical_pos += 50
+            self.labels[item] = pygame_gui.elements.UILabel(text=f'{item}',
+                                        relative_rect=pygame.Rect((-100, vertical_pos), (150, 25)),
+                                        manager=self.manager,
+                                        anchors={'centerx': 'centerx'}
+                                        )
+            self.entries[item] = pygame_gui.elements.UITextEntryLine(relative_rect=pygame.Rect((100, vertical_pos), (150, 25)),
+                                                manager=self.manager,
+                                                placeholder_text='Qty',
+                                                anchors={'centerx': 'centerx'}
+                                               )
+
+        if len(player.cargo) == 0:
+            top_target = 'top'
+            top_spacing = 300
+        else:
+            top_target = list(self.entries.values())[-1]
+            top_spacing = 20
+
+
+        self.sell_button = pygame_gui.elements.UIButton(relative_rect=pygame.Rect((100,top_spacing), (100, 50)),
+                                                    text = 'Sell',
+                                                    manager=self.manager,
+                                                    anchors={'centerx': 'centerx',
+                                                            'top_target': top_target}
+                                                            )    
+        self.exit_button = pygame_gui.elements.UIButton(relative_rect=pygame.Rect((-100,top_spacing), (100, 50)),
+                                                    text = 'Leave',
+                                                    manager=self.manager,
+                                                    anchors={'centerx': 'centerx',
+                                                            'top_target': top_target}
+                                                            )  
+
+    def handle_event(self, event):
+        super().handle_event(event)
+        if event.type == pygame_gui.UI_BUTTON_PRESSED:
+            if event.ui_element == self.sell_button:
+                for product in self.entries:
+                    if self.entries[product].text.isdigit():
+                        qty = int(self.entries[product].text)
+                        player.sell_cargo(product, player.cargo[product]['value'], qty)
+                self.is_running = False
+            if event.ui_element == self.exit_button:
+                self.is_running = False
 
 # This needs to be built
 class BuyScreen(GameScreen):
     def __init__(self, screen, city):
         super().__init__(screen)
 
+        self.labels: Dict[str, UILabel] = {}
+        self.entries: Dict[str, UITextEntryLine] = {}
+
+    def objects(self):
+        super().objects()
+        vertical_pos = 100
+
+        if True:
+            top_target = 'top'
+            top_spacing = 300
+        else:
+            top_target = list(self.entries.values())[-1]
+            top_spacing = 20
+
+
+        self.buy_button = pygame_gui.elements.UIButton(relative_rect=pygame.Rect((100,top_spacing), (100, 50)),
+                                                    text = 'Buy',
+                                                    manager=self.manager,
+                                                    anchors={'centerx': 'centerx',
+                                                            'top_target': top_target}
+                                                            )    
+        self.exit_button = pygame_gui.elements.UIButton(relative_rect=pygame.Rect((-100,top_spacing), (100, 50)),
+                                                    text = 'Leave',
+                                                    manager=self.manager,
+                                                    anchors={'centerx': 'centerx',
+                                                            'top_target': top_target}
+                                                            )  
+
+    def handle_event(self, event):
+        super().handle_event(event)
+        if event.type == pygame_gui.UI_BUTTON_PRESSED:
+            if event.ui_element == self.buy_button:
+                self.is_running = False
+            if event.ui_element == self.exit_button:
+                self.is_running = False
+
 # This needs to be built
 class PortScreen(GameScreen):
     def __init__(self, screen):
         super().__init__(screen)
+
+# This is pretty ambitious. Generate a map of the coastline and cities
+# with a moving dot (arrow?) for the current location
+class SailingScreen(GameScreen):
+    def __init__(self, screen):
+        super().__init__(screen)
+
+class PopUpScreen(UIWindow):
+    def __init__(self, name: str, manager: pygame_gui.UIManager, size: tuple):
+        super().__init__(pygame.Rect(*POPUP_TOPLEFT, *size),
+                                    manager=manager,
+                                    window_display_title=name,
+                                    resizable=True,
+                                    object_id=f'#{name}')
+        self.manager = manager
+        self.is_active = False
+        self.width, self.height = size
+        self.objects()
+
+    def on_close_window_button_pressed(self):
+        self.hide()
+        self.is_active = False
+
+    def objects(self):
+        pass
+
+    def handle_event(self, event):
+        pass
+
+# Need to turn the player class into a sprite for hp/energy bars
+class CharScreen(PopUpScreen):
+    def __init__(self, name: str, manager: pygame_gui.UIManager, size: tuple):
+        super().__init__(name, manager, size)
+        self.inv = None
+        self.cargo = None
+
+    def objects(self):
+        self.player_name = pygame_gui.elements.UITextBox(html_text=f'{player.name}',
+                                                    relative_rect=pygame.Rect(0, 25, 400, 50),
+                                                    manager=self.manager,
+                                                    container=self,
+                                                    anchors={'centerx': 'centerx'})
+        self.location = pygame_gui.elements.UILabel(text=f'Current City: {player.location}',
+                                                    relative_rect=pygame.Rect(0, 25, 400, 25),
+                                                    manager=self.manager,
+                                                    container=self,
+                                                    anchors={'centerx': 'centerx',
+                                                             'top_target': self.player_energy})
+        self.currency = pygame_gui.elements.UILabel(text=f'Gold: {player.currency}',
+                                                    relative_rect=pygame.Rect(0, 25, 400, 25),
+                                                    manager=self.manager,
+                                                    container=self,
+                                                    anchors={'centerx': 'centerx',
+                                                             'top_target': self.location})
+
+
+    def handle_event(self, event):
+        if event.type == pygame_gui.UI_WINDOW_RESIZED:    
+            self.width, self.height = event.internal_size
+            self.player_health.set_dimensions((self.width-50, 25))
+            self.player_energy.set_dimensions((self.width-50, 25))
+        if event.type == pygame.KEYDOWN and not self.is_active:
+            if event.key == pygame.K_c:
+                self.show()
+                self.is_active = True
+
+class InvScreen(PopUpScreen):
+    def __init__(self, name: str, manager: pygame_gui.UIManager, size: tuple):
+        super().__init__(name, manager, size)
+        self.objects()
+        self.qty_held = 0
+
+    def objects(self):
+        item_size = (100, 100)
+        spacing = 150
+        top_spacing = 50
+        i = 0
+        for item in player.inventory:
+            if i == 4:
+                i = 0
+                top_spacing += spacing
+            pygame_gui.elements.UIButton(relative_rect=pygame.Rect(50+i*spacing, top_spacing, *item_size),
+                                        text = item,
+                                        manager=self.manager,
+                                        container=self)
+            i += 1
+
+    def handle_event(self, event):
+        if event.type == pygame_gui.UI_WINDOW_RESIZED:    
+            self.width, self.height = event.internal_size
+        if event.type == pygame_gui.UI_BUTTON_PRESSED and False:
+            qty_owned = player.inventory[event.ui_element.text]['qty']
+            if pygame.key == (pygame.K_LSHIFT or pygame.K_RSHIFT):
+                self.qty_held = qty_owned
+            elif pygame.key == (pygame.K_LALT or pygame.K_RALT):
+                self.qty_held += min(qty_owned, 10)
+            else:
+                self.qty_held += 1
+            self.qty_held = max(qty_owned, self.qty_held)
+
+class CargoScreen(PopUpScreen):
+    def __init__(self, name: str, manager: pygame_gui.UIManager, size: tuple):
+        super().__init__(name, manager, size)
+        self.objects()
+
+    def objects(self):
+        item_size = (100, 100)
+        spacing = 150
+        top_spacing = 50
+        i = 0
+        for item in player.cargo:
+            if i == 4:
+                i = 0
+                top_spacing += spacing
+            pygame_gui.elements.UIButton(relative_rect=pygame.Rect(50+i*spacing, top_spacing, *item_size),
+                                        text = item['name'],
+                                        manager=self.manager,
+                                        container=self)
+            i += 1
+
+    def handle_event(self, event):
+        if event.type == pygame_gui.UI_WINDOW_RESIZED:    
+            self.width, self.height = event.internal_size
+        if event.type == pygame_gui.UI_BUTTON_PRESSED and pygame.KEYDOWN and False:
+            qty_owned = player.inventory[event.ui_element.text]['qty']
+            if event.key == (pygame.K_LSHIFT or pygame.K_RSHIFT):
+                qty_held = qty_owned
+            if event.key == (pygame.K_LALT or pygame.K_RALT):
+                qty_held += min(qty_owned, 10)
 
 def main():
     pygame.init()
@@ -275,67 +578,6 @@ def main():
     screen = pygame.display.set_mode(options.resolution)
 
     StartScreen(screen).mainloop()
-
-# Deprecated, just here for reference to the player calls. 
-# Can be removed when the new shop screens and player sidebar are built
-def main_old():
-    world = World()
-    print("Hello from unchartedwaters!")
-    player = Player("Hero")
-    player.location = world.cities.get_city("Viremontis")
-    print(f"You are currently in {player.location.name}.")
-
-    while True:
-        print(f"You have {player.currency} gold.")
-        print("What would you like to do?")
-        print("1. Visit Shop")
-        print("2. Check Inventory")
-        print("3. Manage Cargo")
-        print("4. Leave City")
-        choice = input("Enter your choice: ")
-        if choice == "1":
-            shop(player)
-        elif choice == "2":
-            print("Your inventory:")
-            for item in player.get_inventory():
-                print(f"- {item}")
-        elif choice == "3":
-            print("Your cargo:")
-            for product in player.get_cargo():
-                print(f"- {product}: {player.get_cargo()[product]['qty']}")
-        elif choice == "4":
-            print("Leaving city...")
-            break
-        else:
-            print("Invalid choice.")
-        print("--------------------")
-
-# Deprecated, just here for reference to the player calls. 
-# Can be removed when the new shop screens and player sidebar are built
-def shop(player):
-    city = player.location
-    print("\nWelcome to the shop!")
-    print("Available products:")
-    for product, details in city.get_products().items():
-        print(f"{product}: {details['price']} gold (Stock: {details['qty']})")
-    print("What would you like to do?")
-    print("1. Buy Product")
-    print("2. Sell Product")
-    choice = input("Enter your choice: ")
-    if choice == "1":
-        product = input("Enter the product name: ")
-        if product not in city.get_products():
-            print('Invalid choice')
-            return
-        qty = int(input("Enter the quantity: "))
-        city.sell_product(player, product, qty)
-    elif choice == "2":
-        print(f'You have {player.get_cargo()}')
-        product = input("Enter the product name: ")
-        qty = int(input("Enter the quantity: "))
-        city.sell_product(player, product, qty)
-    else:
-        print("Invalid choice.")
 
 if __name__ == "__main__":
     main()

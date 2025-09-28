@@ -1,10 +1,23 @@
+# How can I treat a player as a sprite?
+# Need to look at this
+
 class Player:
     def __init__(self, name):
         self.name = name
         self.location = ""
         self.currency = 10_000
-        self.inventory = []
-        self.cargo = {}
+        self.health = 87
+        self.energy = 92
+        self.max_health = 100
+        self.max_energy = 100
+        self.inventory = {
+            'Starting Dagger': {'value':100, 'dmg': 5, 'qty': 1}
+            }
+        self.cargo = {
+            'Beans': {'value': 5, 'qty': 100},
+            'Fish': {'value': 7, 'qty': 17},
+            'Gunpowder': {'value': 80, 'qty': 23}
+        }
 
     def add_item(self, item):
         self.inventory.append(item)
@@ -14,13 +27,11 @@ class Player:
 
     def sell_cargo(self, product, price, qty):
         if product in self.cargo:
-            if self.cargo[product]["qty"] < qty:
+            if qty < self.cargo[product]["qty"]:
                 self.cargo[product]["qty"] -= qty
-            elif self.cargo[product]["qty"] == qty:
+            elif self.cargo[product]["qty"] == qty or qty > self.cargo[product]["qty"]:
+                qty = self.cargo[product]["qty"]
                 del self.cargo[product]
-            else:
-                print(f"You only have {self.cargo[product]['qty']} of {product}.")
-                return
         self.currency += price * qty
         print(f"{self.name} sold {qty} of {product} for a total of {price * qty}.")
 
