@@ -6,39 +6,35 @@ class Category(Enum):
     HERBS_AND_POTIONS = "Herbs and Potions"
     JEWELRY = "Jewelry"
     MINERALS = "Minerals"
+    SPICES = 'Spices'
+    NONE = 'None'
 
-class Product():
-    def __init__(self, name, price, category: Category):
+class Item():
+    def __init__(self, name, value):
         self.name = name
-        self.price = price
-        self.category = category
+        self.value = value
 
-goods_catalog = {
-    "Magical Tomes": {"price": 100, "category": Category.MAGICAL_ITEMS},
-    "Enchanted Artifacts": {"price": 200, "category": Category.MAGICAL_ITEMS},
-    "Rare Minerals": {"price": 300, "category": Category.MINERALS},
-    "Silk Fabrics": {"price": 150, "category": Category.TEXTILES},
-    "Exotic Spices": {"price": 250, "category": Category.HERBS_AND_POTIONS},
-    "Fine Jewelry": {"price": 350, "category": Category.JEWELRY},
-    "Herbal Remedies": {"price": 120, "category": Category.HERBS_AND_POTIONS},
-    "Crystalized Fruits": {"price": 180, "category": Category.HERBS_AND_POTIONS},
-    "Elven Jewelry": {"price": 280, "category": Category.JEWELRY},
-    "Mystic Herbs": {"price": 380, "category": Category.HERBS_AND_POTIONS},
-    "Dark Crystals": {"price": 200, "category": Category.MINERALS},
-    "Shadowy Potions": {"price": 300, "category": Category.HERBS_AND_POTIONS},
-}
+class Product(Item):
+    def __init__(self, name, category:Category, value:int=0, qty:int=0):
+        super().__init__(name, value)
+        self.qty = qty
+        self.cost = 0
+        self.category: Category = category
 
-class GoodsCatalog:
-    def __init__(self, goods = goods_catalog):
-        self.goods = goods
+class Equipment(Item):
+    def __init__(self, name, value, durability):
+        super().__init__(name, value)
+        self.durability = durability
 
-    def add_product(self, product, price, category: Category):
-        if product not in self.goods:
-            self.goods[product] = {"price": price, "category": category}
-
-    def get_product(self, product):
-        if product in self.goods:
-            return self.goods[product]
-        return None
-
-trade_goods = GoodsCatalog(goods_catalog)
+magical_tome = Product(name='Magical Tome', category=Category.MAGICAL_ITEMS)
+enchanted_artifacts = Product(name='Enchanted Artifacts', category=Category.MAGICAL_ITEMS)
+rare_minerals = Product(name="Rare Minerals", category=Category.MINERALS)
+silk_fabrics = Product(name='Silk Fabrics', category=Category.TEXTILES)
+exotic_spice = Product(name='Exotic Spices', category=Category.SPICES)
+fine_jewelry = Product(name='Fine Jewelry', category=Category.JEWELRY)
+herbal_remedies = Product(name='Herbal Remedies', category=Category.HERBS_AND_POTIONS)
+crystalised_fruits = Product(name='Crystalised Fruits', category=Category.SPICES)
+elven_jewelry = Product(name='Elven Jewelry', category=Category.JEWELRY)
+mystic_herbs = Product(name='Mystic Herbs', category=Category.HERBS_AND_POTIONS)
+dark_crystals = Product(name='Dark Crystals', category=Category.MINERALS)
+shadowy_potions = Product(name='Shadowy Potions', category=Category.HERBS_AND_POTIONS)

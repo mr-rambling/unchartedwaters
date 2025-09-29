@@ -1,4 +1,4 @@
-from cities import Cities, City, cities
+from cities import City, Region, Velmore
 from player import Player
 from constants import *
 import pygame
@@ -10,17 +10,7 @@ from pygame_gui.elements.ui_text_entry_line import UITextEntryLine
 from typing import Dict
 
 # placeholder player
-player = Player('I was too lazy to change from Default')
-
-# This is questionable, might need to rework how cities work
-# In fact, I should with the new screen based architecture
-class World:
-    def __init__(self):
-        self.cities = Cities()
-        for city in cities:
-            self.cities.add_city(city)
-
-        self.cities.get_city("Viremontis").add_product("Magical Tomes", 10, 1.2)
+player = Player('I was too lazy to change from Default', Velmore, Velmore.cities['Viremontis'])
 
 # Contains base state of game options
 class Options():
@@ -148,7 +138,7 @@ class NewGameScreen(Stage):
                 if self.player_name.text != '':
                     global player 
                     player = Player(f'{self.player_name.text}')
-                CityScreen(self.screen).mainloop()
+                CityScreen(self.screen, player.location).mainloop()
             if event.ui_element == self.exit_button:
                 self.is_running = False   
 
@@ -257,13 +247,13 @@ class GameScreen(Stage):
 
 # Save button is not linked to anything
 class CityScreen(GameScreen):
-    def __init__(self, screen, city = 'Launceston'):
+    def __init__(self, screen, city: City):
         super().__init__(screen)
         self.city = city
 
     def objects(self):
         super().objects()
-        self.NPC_speech = pygame_gui.elements.UITextBox(html_text=f'Welcome to {self.city}!',
+        self.NPC_speech = pygame_gui.elements.UITextBox(html_text=f'Welcome to {self.city.name}!',
                                                     relative_rect=pygame.Rect(0, 100, 400, 100),
                                                     manager=self.manager,
                                                     anchors={'centerx': 'centerx'})
@@ -339,25 +329,48 @@ class ShopScreen(GameScreen):
             if event.ui_element == self.exit_button: 
                 self.is_running = False       
 
+# need to update player cargo with new product classes
 class SellScreen(GameScreen):
     def __init__(self, screen, city):
         super().__init__(screen)
 
-        self.labels: Dict[str, UILabel] = {}
-        self.entries: Dict[str, UITextEntryLine] = {}
+        self.labels = {}
+        self.prices = {}
+        self.entries = {}
 
     def objects(self):
         super().objects()
         vertical_pos = 100 
 
-        for item in player.cargo:
+        product_label = pygame_gui.elements.UILabel(text=f'Product',
+                                        relative_rect=pygame.Rect((-200, vertical_pos), (150, 25)),
+                                        manager=self.manager,
+                                        anchors={'centerx': 'centerx'}
+                                        )
+        price_label = pygame_gui.elements.UILabel(text='Price',
+                                        relative_rect=pygame.Rect((0, vertical_pos), (150, 25)),
+                                        manager=self.manager,
+                                        anchors={'centerx': 'centerx'}
+                                        )
+        qty_label = pygame_gui.elements.UILabel(text='Qty',
+                                                relative_rect=pygame.Rect((200, vertical_pos), (150, 25)),
+                                                manager=self.manager,
+                                                anchors={'centerx': 'centerx'}
+                                               )
+
+        for item in player.cargo.values():
             vertical_pos += 50
-            self.labels[item] = pygame_gui.elements.UILabel(text=f'{item}',
+            self.labels[item.name] = pygame_gui.elements.UILabel(text=f'{item.name}',
                                         relative_rect=pygame.Rect((-100, vertical_pos), (150, 25)),
                                         manager=self.manager,
                                         anchors={'centerx': 'centerx'}
                                         )
-            self.entries[item] = pygame_gui.elements.UITextEntryLine(relative_rect=pygame.Rect((100, vertical_pos), (150, 25)),
+            self.prices[item.name] = pygame_gui.elements.UILabel(text=f'{item.cost}',
+                                        relative_rect=pygame.Rect((0, vertical_pos), (150, 25)),
+                                        manager=self.manager,
+                                        anchors={'centerx': 'centerx'}
+                                        )
+            self.entries[item.name] = pygame_gui.elements.UITextEntryLine(relative_rect=pygame.Rect((100, vertical_pos), (150, 25)),
                                                 manager=self.manager,
                                                 placeholder_text='Qty',
                                                 anchors={'centerx': 'centerx'}
@@ -391,22 +404,58 @@ class SellScreen(GameScreen):
                 for product in self.entries:
                     if self.entries[product].text.isdigit():
                         qty = int(self.entries[product].text)
-                        player.sell_cargo(product, player.cargo[product]['value'], qty)
+                        player.sell_cargo(product, player.cargo[product].cost, qty)
                 self.is_running = False
             if event.ui_element == self.exit_button:
                 self.is_running = False
 
 # This needs to be built
 class BuyScreen(GameScreen):
-    def __init__(self, screen, city):
+    def __init__(self, screen, city: City):
         super().__init__(screen)
 
         self.labels: Dict[str, UILabel] = {}
+        self.prices: Dict[str, UILabel] = {}
         self.entries: Dict[str, UITextEntryLine] = {}
+        self.city = city
 
     def objects(self):
         super().objects()
         vertical_pos = 100
+
+        product_label = pygame_gui.elements.UILabel(text=f'Product',
+                                        relative_rect=pygame.Rect((-200, vertical_pos), (150, 25)),
+                                        manager=self.manager,
+                                        anchors={'centerx': 'centerx'}
+                                        )
+        price_label = pygame_gui.elements.UILabel(text='Price',
+                                        relative_rect=pygame.Rect((0, vertical_pos), (150, 25)),
+                                        manager=self.manager,
+                                        anchors={'centerx': 'centerx'}
+                                        )
+        qty_label = pygame_gui.elements.UILabel(text='Qty',
+                                                relative_rect=pygame.Rect((200, vertical_pos), (150, 25)),
+                                                manager=self.manager,
+                                                anchors={'centerx': 'centerx'}
+                                               )
+        
+        for item in self.city.products:
+            vertical_pos += 50
+            self.labels[item.name] = pygame_gui.elements.UILabel(text=f'{item.name}',
+                                        relative_rect=pygame.Rect((-200, vertical_pos), (150, 25)),
+                                        manager=self.manager,
+                                        anchors={'centerx': 'centerx'}
+                                        )
+            self.prices[item.value] = pygame_gui.elements.UILabel(text=f'{item.value}',
+                                        relative_rect=pygame.Rect((0, vertical_pos), (150, 25)),
+                                        manager=self.manager,
+                                        anchors={'centerx': 'centerx'}
+                                        )
+            self.entries[item.name] = pygame_gui.elements.UITextEntryLine(relative_rect=pygame.Rect((200, vertical_pos), (150, 25)),
+                                                manager=self.manager,
+                                                placeholder_text='Qty',
+                                                anchors={'centerx': 'centerx'}
+                                               )
 
         if True:
             top_target = 'top'
@@ -433,6 +482,10 @@ class BuyScreen(GameScreen):
         super().handle_event(event)
         if event.type == pygame_gui.UI_BUTTON_PRESSED:
             if event.ui_element == self.buy_button:
+                for product in self.entries:
+                    if self.entries[product].text.isdigit():
+                        qty = int(self.entries[product].text)
+                        player.buy_cargo(self.city.products)
                 self.is_running = False
             if event.ui_element == self.exit_button:
                 self.is_running = False
