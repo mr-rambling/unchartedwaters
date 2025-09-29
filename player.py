@@ -1,5 +1,6 @@
 from cities import City, Region
 from goods import *
+from statistics import mean
 
 # How can I treat a player as a sprite?
 # Need to look at this
@@ -22,6 +23,9 @@ class Player:
             'Fine Jewelry': Product(name='Fine Jewelry', category=Category.JEWELRY, qty=12),
             'Dark Crystals': Product(name='Dark Crystals', category=Category.MINERALS, qty=27)
         }
+        self.cargo['Magical Tome'].cost = 30
+        self.cargo['Fine Jewelry'].cost = 80
+        self.cargo['Dark Crystals'].cost = 50
 
     def add_item(self, item):
         self.inventory.append(item)
@@ -30,6 +34,7 @@ class Player:
         self.inventory.remove(item)
 
     def sell_cargo(self, product, price, qty):
+        price = round(price)
         if product in self.cargo.keys():
             if qty < self.cargo[product].qty:
                 self.cargo[product].qty -= qty
@@ -43,15 +48,19 @@ class Player:
         '''
         Returns number of product purchased
         '''
+        price = round(price)
         if self.currency < price * qty:
-            print(f"{self.name} does not have enough currency to buy {qty} of {product}.")
-            return 0
+            qty = self.currency // price
+            if qty == 0:
+                return
         if product.name in self.cargo:
             self.cargo[product.name].qty += qty
+            self.cargo[product.name].cost = (self.cargo[product.name].cost * self.cargo[product.name].qty + price * qty) / (self.cargo[product.name].qty + qty)
         else:
-            self.cargo[product.name] = product
+            self.cargo[product.name] = Product(name=product.name, category=product.category, qty=qty)
+            self.cargo[product.name].cost = price
         self.currency -= price * qty
-        print(f"{self.name} bought {qty} of {product} for a total of {price * qty}.")
+        print(f"{self.name} bought {qty} of {product.name} for a total of {price * qty}.")
         return qty
 
     def get_inventory(self):

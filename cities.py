@@ -31,22 +31,33 @@ Velmore = Region('Velmore')
 Velmore.cities['Viremontis'] = City("Viremontis", 
                     (0, 0), 
                     ["The Great Library", "Viremontis Castle", "The Crystal Lake"],
-                    {'Magical Tome': Product(name='Magical Tome', category=Category.MAGICAL_ITEMS, qty=19),
-                     'Enchanted Artifacts': Product(name='Enchanted Artifacts', category=Category.MAGICAL_ITEMS)}
-                    [magical_tome, enchanted_artifacts, silk_fabrics])
+                    {'Magical Tome': Product(name='Magical Tome', category=Category.MAGICAL_ITEMS, value=90, qty=19),
+                     'Enchanted Artifacts': Product(name='Enchanted Artifacts', category=Category.MAGICAL_ITEMS, value=70, qty=8),
+                     'Silk Fabrics': Product(name='Silk Fabrics', category=Category.TEXTILES, value=30, qty=15),
+                     'Fine Jewelry': Product(name='Fine Jewelry', category=Category.JEWELRY, value=60, qty=12)})
 Velmore.cities['Serathorne'] = City("Serathorne", 
                     (0, 98),
                     ["The Serpent's Fountain", "Serathorne Cathedral", "The Whispering Woods"],
-                    [rare_minerals, dark_crystals, crystalised_fruits])
+                    {'Rare Minerals': Product(name='Rare Minerals', category=Category.MINERALS, value=50, qty=12),
+                     'Dark Crystals': Product(name='Dark Crystals', category=Category.MINERALS, value=80, qty=5),
+                     'Crystalised Fruits': Product(name='Crystalised Fruits', category=Category.MINERALS, value=20, qty=20)})
 Velmore.cities['Draymoor'] = City("Draymoor", 
                     (-32, 50),
                     ["The Draymoor Keep", "The Misty Marshes", "The Ancient Oak"],
-                    [enchanted_artifacts, elven_jewelry, shadowy_potions])
+                    {'Enchanted Artifacts': Product(name='Enchanted Artifacts', category=Category.MAGICAL_ITEMS, value=70, qty=8),
+                     'Elven Jewelry': Product(name='Elven Jewelry', category=Category.JEWELRY, value=100, qty=10),
+                     'Shadowy Potions': Product(name='Shadowy Potions', category=Category.HERBS_AND_POTIONS, value=60, qty=15)})
 Velmore.cities['Caldrith Vale'] = City("Caldrith Vale", 
                     (-16, 75),
                     ["The Caldrith Falls", "The Enchanted Glade", "The Ancient Ruins"],
-                    [exotic_spice, crystalised_fruits, mystic_herbs, herbal_remedies])
+                    {'Exotic Spice': Product(name='Exotic Spice', category=Category.SPICES, value=25, qty=25),
+                     'Crystalised Fruits': Product(name='Crystalised Fruits', category=Category.MINERALS, value=20, qty=20),
+                     'Mystic Herbs': Product(name='Mystic Herbs', category=Category.SPICES, value=30, qty=30),
+                     'Herbal Remedies': Product(name='Herbal Remedies', category=Category.HERBS_AND_POTIONS, value=15, qty=15)})
 Velmore.cities['Nex Hollow'] = City("Nex Hollow", 
                     (-86, 42),
                     ["The Shadowed Glade", "Nex Hollow Caverns", "The Whispering Falls"],
-                    [silk_fabrics, shadowy_potions, dark_crystals, rare_minerals])
+                    {'Silk Fabrics': Product(name='Silk Fabrics', category=Category.TEXTILES, value=30, qty=4),
+                     'Shadowy Potions': Product(name='Shadowy Potions', category=Category.HERBS_AND_POTIONS, value=60, qty=15),
+                     'Dark Crystals': Product(name='Dark Crystals', category=Category.MINERALS, value=80, qty=5),
+                     'Rare Minerals': Product(name='Rare Minerals', category=Category.MINERALS, value=50, qty=12)})
