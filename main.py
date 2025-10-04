@@ -137,7 +137,7 @@ class NewGameScreen(Stage):
                 self.is_running = False
                 if self.player_name.text != '':
                     global player 
-                    player = Player(f'{self.player_name.text}')
+                    player = Player(f'{self.player_name.text}', Velmore, Velmore.cities['Viremontis'])
                 CityScreen(self.screen, player.location).mainloop()
             if event.ui_element == self.exit_button:
                 self.is_running = False   
@@ -283,7 +283,6 @@ class CityScreen(GameScreen):
             if event.ui_element == self.market_button:
                 ShopScreen(self.screen, self.city).mainloop()
             if event.ui_element == self.port_button:
-                self.is_running = False
                 PortScreen(self.screen).mainloop()    
             if event.ui_element == self.save_button:
                 pass
@@ -340,7 +339,7 @@ class SellScreen(GameScreen):
 
     def objects(self):
         super().objects()
-        vertical_pos = 100 
+        vertical_pos = 200 
 
         product_label = pygame_gui.elements.UILabel(text=f'Product',
                                         relative_rect=pygame.Rect((-300, vertical_pos), (150, 25)),
@@ -370,10 +369,8 @@ class SellScreen(GameScreen):
                                         manager=self.manager,
                                         anchors={'centerx': 'centerx'}
                                         )
-            if product in self.city.products:
-                price = round(self.city.products[product].value * IN_STOCK_VALUE_MODIFIER)
-            else:
-                price = round(product.cost * BASE_SALE_COST_MODIFIER)
+            
+            price = self.city.get_selling_price(product)
             self.prices[product.name] = pygame_gui.elements.UILabel(text=f'{price}',
                                         relative_rect=pygame.Rect((-100, vertical_pos), (150, 25)),
                                         manager=self.manager,
@@ -418,10 +415,7 @@ class SellScreen(GameScreen):
                 for product in self.entries:
                     if self.entries[product].text.isdigit():
                         qty = int(self.entries[product].text)
-                        if product in self.city.products:
-                            price = self.city.products[product].value * IN_STOCK_VALUE_MODIFIER
-                        else:
-                            price = player.cargo[product].cost * BASE_SALE_COST_MODIFIER
+                        price = self.city.get_selling_price(player.cargo[product])
                         player.sell_cargo(product, price, qty)
                 self.is_running = False
             if event.ui_element == self.exit_button:
@@ -439,7 +433,7 @@ class BuyScreen(GameScreen):
 
     def objects(self):
         super().objects()
-        vertical_pos = 100
+        vertical_pos = 200
 
         product_label = pygame_gui.elements.UILabel(text=f'Product',
                                         relative_rect=pygame.Rect((-300, vertical_pos), (150, 25)),
@@ -517,9 +511,39 @@ class BuyScreen(GameScreen):
             if event.ui_element == self.exit_button:
                 self.is_running = False
 
+# Need to fix spacing
 class PortScreen(GameScreen):
     def __init__(self, screen):
         super().__init__(screen)
+        self.locations = {}
+
+    def objects(self):
+        super().objects()        
+        item_size = (100, 100)
+        spacing = 150
+        top_spacing = 200
+        i = 0
+        for city in Velmore.cities:
+            if i == 4:
+                i = 0
+                top_spacing += spacing
+            self.locations[city] = pygame_gui.elements.UIButton(relative_rect=pygame.Rect(300+i*spacing, top_spacing, *item_size),
+                                                            text = city,
+                                                            manager=self.manager)
+            i += 1
+
+        self.exit_button = pygame_gui.elements.UIButton(relative_rect=pygame.Rect((0,500), (100, 50)),
+                                                    text = 'Leave',
+                                                    manager=self.manager,
+                                                    anchors={'centerx': 'centerx'})        
+    def handle_event(self, event):
+        super().handle_event(event)
+        if event.type == pygame_gui.UI_BUTTON_PRESSED:
+            if event.ui_element == self.exit_button: 
+                self.is_running = False  
+            if event.ui_element in self.locations.values():
+                CityScreen(self.screen, Velmore.cities[event.ui_element.text]).mainloop()
+                player.location = Velmore.cities[event.ui_element.text]
 
 # This is pretty ambitious. Generate a map of the coastline and cities
 # with a moving dot (arrow?) for the current location
@@ -558,18 +582,18 @@ class CharScreen(PopUpScreen):
 
     def objects(self):
         self.player_name = pygame_gui.elements.UITextBox(html_text=f'{player.name}',
-                                                    relative_rect=pygame.Rect(0, 25, 400, 50),
+                                                    relative_rect=pygame.Rect(0, 25, 250, 50),
                                                     manager=self.manager,
                                                     container=self,
                                                     anchors={'centerx': 'centerx'})
-        self.location = pygame_gui.elements.UILabel(text=f'Current City: {player.location}',
-                                                    relative_rect=pygame.Rect(0, 25, 400, 25),
+        self.location = pygame_gui.elements.UILabel(text=f'Current City: {player.location.name}',
+                                                    relative_rect=pygame.Rect(0, 25, 250, 25),
                                                     manager=self.manager,
                                                     container=self,
                                                     anchors={'centerx': 'centerx',
-                                                             'top_target': self.player_energy})
+                                                             'top_target': self.player_name})
         self.currency = pygame_gui.elements.UILabel(text=f'Gold: {player.currency}',
-                                                    relative_rect=pygame.Rect(0, 25, 400, 25),
+                                                    relative_rect=pygame.Rect(0, 25, 250, 25),
                                                     manager=self.manager,
                                                     container=self,
                                                     anchors={'centerx': 'centerx',
@@ -635,7 +659,7 @@ class CargoScreen(PopUpScreen):
                 i = 0
                 top_spacing += spacing
             pygame_gui.elements.UIButton(relative_rect=pygame.Rect(50+i*spacing, top_spacing, *item_size),
-                                        text = item['name'],
+                                        text = item,
                                         manager=self.manager,
                                         container=self)
             i += 1

@@ -1,4 +1,5 @@
 from goods import *
+from constants import *
 
 class City():
     def __init__(self, name, location, landmarks, products: list[Product] = []):
@@ -12,6 +13,14 @@ class City():
         Returns list of products available in the city
         '''
         return self.products.keys()    
+    
+    def get_selling_price(self, product: Product):
+        '''
+        Returns the selling price of a product in the city
+        '''
+        if product.name in self.products.keys():
+            return int(self.products[product.name].value * IN_STOCK_VALUE_MODIFIER)
+        return int(product.value * OUT_OF_STOCK_VALUE_MODIFIER)
 
 class Region:
     def __init__(self, name):

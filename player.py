@@ -19,9 +19,9 @@ class Player:
             'Starting Dagger': {'value':100, 'dmg': 5, 'qty': 1}
             }
         self.cargo = {
-            'Magical Tome': Product(name='Magical Tome', category=Category.MAGICAL_ITEMS, qty=100),
-            'Fine Jewelry': Product(name='Fine Jewelry', category=Category.JEWELRY, qty=12),
-            'Dark Crystals': Product(name='Dark Crystals', category=Category.MINERALS, qty=27)
+            'Magical Tome': Product(name='Magical Tome', category=Category.MAGICAL_ITEMS, qty=100, value=90),
+            'Fine Jewelry': Product(name='Fine Jewelry', category=Category.JEWELRY, qty=12, value=60),
+            'Dark Crystals': Product(name='Dark Crystals', category=Category.MINERALS, qty=27, value=80)
         }
         self.cargo['Magical Tome'].cost = 30
         self.cargo['Fine Jewelry'].cost = 80
