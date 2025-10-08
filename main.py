@@ -6,10 +6,11 @@ import pygame_gui
 import sys
 from pygame_gui.elements.ui_window import UIWindow
 from pygame_gui.elements.ui_label import UILabel
+from pygame_gui.elements.ui_button import UIButton
 from pygame_gui.elements.ui_text_entry_line import UITextEntryLine
 from typing import Dict
 
-# placeholder player
+# default player
 player = Player('I was too lazy to change from Default', Velmore, Velmore.cities['Viremontis'])
 
 # Contains base state of game options
@@ -62,6 +63,7 @@ class Stage():
 
 # Need to figure out load mechanics. 
 # Load is currently non-functional
+# Can likely just save player state to a txt file
 class StartScreen(Stage):
     def __init__(self, screen):
         super().__init__(screen)
@@ -103,7 +105,7 @@ class StartScreen(Stage):
             if event.ui_element == self.exit_button:
                 self.is_running = False   
                 pygame.quit()
-                sys.quit()
+                sys.exit()
 
 # Could add an option here for starting city
 class NewGameScreen(Stage):
@@ -201,8 +203,7 @@ class GameScreen(Stage):
                                                                         anchors={'left': 'left',
                                                                         'top_target': self.player_health})
         self.player_energy.bar_filled_colour = 'blue'
-
-        
+ 
     def handle_event(self, event):
         if self.inventory and self.inventory.is_active:
             self.inventory.handle_event(event)
@@ -362,7 +363,7 @@ class SellScreen(GameScreen):
                                                 anchors={'centerx': 'centerx'}
                                                )
 
-        for product in player.cargo.values():
+        for product in player.ship.cargo.values():
             vertical_pos += 50
             self.labels[product.name] = pygame_gui.elements.UILabel(text=f'{product.name}',
                                         relative_rect=pygame.Rect((-300, vertical_pos), (150, 25)),
@@ -387,7 +388,7 @@ class SellScreen(GameScreen):
                                                 anchors={'centerx': 'centerx'}
                                                )
 
-        if len(player.cargo) == 0:
+        if len(player.ship.cargo) == 0:
             top_target = 'top'
             top_spacing = 300
         else:
@@ -415,7 +416,7 @@ class SellScreen(GameScreen):
                 for product in self.entries:
                     if self.entries[product].text.isdigit():
                         qty = int(self.entries[product].text)
-                        price = self.city.get_selling_price(player.cargo[product])
+                        price = self.city.get_selling_price(player.ship.cargo[product])
                         player.sell_cargo(product, price, qty)
                 self.is_running = False
             if event.ui_element == self.exit_button:
@@ -542,14 +543,92 @@ class PortScreen(GameScreen):
             if event.ui_element == self.exit_button: 
                 self.is_running = False  
             if event.ui_element in self.locations.values():
-                CityScreen(self.screen, Velmore.cities[event.ui_element.text]).mainloop()
-                player.location = Velmore.cities[event.ui_element.text]
+                SailingScreen(self.screen).mainloop()
+                #CityScreen(self.screen, Velmore.cities[event.ui_element.text]).mainloop()
+                #player.location = Velmore.cities[event.ui_element.text]
 
 # This is pretty ambitious. Generate a map of the coastline and cities
 # with a moving dot (arrow?) for the current location
+# start with just generating random events
+# implement food requirement
+# need to map hp to ship in this screen
 class SailingScreen(GameScreen):
     def __init__(self, screen):
         super().__init__(screen)
+    
+        # Load your 2D world map image
+        image_path = "MapChart_Map.png"  # Change this to your image file
+        image = pygame.image.load(image_path)
+
+        # Convert image to a pixel array (Surface to array)
+        pixel_array = pygame.surfarray.array3d(image)
+        self.surface = pygame.surfarray.make_surface(pixel_array)
+        self.left = player.ship.coords[0]
+        self.top = player.ship.coords[1]
+        self.viewport = self.centre_viewport(*SEVILLE, SCREEN_WIDTH, SCREEN_HEIGHT)
+        pygame.key.set_repeat(1, player.ship.move_speed())
+
+    def centre_viewport(self, x, y, viewport_x, viewport_y):
+        '''
+        returns a viewport Rect of size (viewport_x, viewport_y) centered on coords (x, y)
+        '''
+        centre_x = x - viewport_x / 2
+        centre_y = y - viewport_y / 2
+        return pygame.Rect(centre_x, centre_y, viewport_x, viewport_y)    
+
+    def handle_event(self, event):
+        if self.inventory and self.inventory.is_active:
+            self.inventory.handle_event(event)
+        if self.cargo and self.cargo.is_active:
+            self.cargo.handle_event(event)   
+        if event.type == pygame_gui.UI_BUTTON_PRESSED:
+            if event.ui_element == self.inventory_button:
+                self.inventory = InvScreen('Inventory', self.manager, INV_SCREEN)
+                self.inventory.is_active = True
+            if event.ui_element == self.cargo_button:
+                self.cargo = CargoScreen('Cargo', self.manager, INV_SCREEN)
+                self.cargo.is_active = True   
+            if event.ui_element == self.character_button:         
+                self.char_sheet = CharScreen('Character', self.manager, CHAR_SHEET_SIZE)   
+                self.char_sheet.is_active = True
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_RIGHT:
+                self.left += 1
+            if event.key == pygame.K_LEFT:
+                self.left -= 1
+            if event.key == pygame.K_DOWN:
+                self.top += 1
+            if event.key == pygame.K_UP:
+                self.top -= 1
+            self.viewport = self.centre_viewport(self.left, self.top, SCREEN_WIDTH, SCREEN_HEIGHT)
+
+    def mainloop(self):
+        self.is_running = True
+        self.objects()
+
+        while self.is_running:
+            time_delta = self.clock.tick(60)/1000.0
+            for event in pygame.event.get(): 
+                if event.type == pygame.QUIT:
+                    self.is_running = False
+                    pygame.quit()
+                    sys.exit()
+        
+                self.handle_event(event)
+                self.manager.process_events(event)    
+
+            self.manager.update(time_delta)
+            self.update_gold()
+            player.ship.draw_ship(0, SEVILLE, self.surface)
+
+            self.screen.fill((0,0,0))
+            self.screen.blit(self.surface, (0,0), self.viewport)
+            self.manager.draw_ui(self.screen)
+
+            # updates the frames of the game
+            pygame.display.update() 
+
+        pygame.key.set_repeat() 
 
 class PopUpScreen(UIWindow):
     def __init__(self, name: str, manager: pygame_gui.UIManager, size: tuple):
@@ -561,7 +640,6 @@ class PopUpScreen(UIWindow):
         self.manager = manager
         self.is_active = False
         self.width, self.height = size
-        self.objects()
 
     def on_close_window_button_pressed(self):
         self.hide()
@@ -613,40 +691,38 @@ class CharScreen(PopUpScreen):
 class InvScreen(PopUpScreen):
     def __init__(self, name: str, manager: pygame_gui.UIManager, size: tuple):
         super().__init__(name, manager, size)
+        self.buttons: Dict[str, UIButton] = {}
         self.objects()
-        self.qty_held = 0
 
     def objects(self):
         item_size = (100, 100)
         spacing = 150
         top_spacing = 50
         i = 0
-        for item in player.inventory:
+        for item in player.inventory.keys():
             if i == 4:
                 i = 0
                 top_spacing += spacing
-            pygame_gui.elements.UIButton(relative_rect=pygame.Rect(50+i*spacing, top_spacing, *item_size),
-                                        text = item,
+            self.buttons[item] = pygame_gui.elements.UIButton(relative_rect=pygame.Rect(50+i*spacing, top_spacing, *item_size),
+                                                                text = item,
+                                                                manager=self.manager,
+                                                                container=self)
+            pygame_gui.elements.UILabel(relative_rect=pygame.Rect((-35,-30), (25,20)),
+                                        text=f'{player.inventory[item]['qty']}',
+                                        container=self,
                                         manager=self.manager,
-                                        container=self)
+                                        anchors={'top_target':self.buttons[item],
+                                                 'left_target':self.buttons[item]})
             i += 1
 
     def handle_event(self, event):
         if event.type == pygame_gui.UI_WINDOW_RESIZED:    
             self.width, self.height = event.internal_size
-        if event.type == pygame_gui.UI_BUTTON_PRESSED and False:
-            qty_owned = player.inventory[event.ui_element.text]['qty']
-            if pygame.key == (pygame.K_LSHIFT or pygame.K_RSHIFT):
-                self.qty_held = qty_owned
-            elif pygame.key == (pygame.K_LALT or pygame.K_RALT):
-                self.qty_held += min(qty_owned, 10)
-            else:
-                self.qty_held += 1
-            self.qty_held = max(qty_owned, self.qty_held)
 
 class CargoScreen(PopUpScreen):
     def __init__(self, name: str, manager: pygame_gui.UIManager, size: tuple):
         super().__init__(name, manager, size)
+        self.buttons: Dict[str, UIButton] = {}
         self.objects()
 
     def objects(self):
@@ -654,14 +730,20 @@ class CargoScreen(PopUpScreen):
         spacing = 150
         top_spacing = 50
         i = 0
-        for item in player.cargo:
+        for item in player.ship.cargo:
             if i == 4:
                 i = 0
                 top_spacing += spacing
-            pygame_gui.elements.UIButton(relative_rect=pygame.Rect(50+i*spacing, top_spacing, *item_size),
+            self.buttons[item] = pygame_gui.elements.UIButton(relative_rect=pygame.Rect(50+i*spacing, top_spacing, *item_size),
                                         text = item,
                                         manager=self.manager,
                                         container=self)
+            pygame_gui.elements.UILabel(relative_rect=pygame.Rect((-35,-30), (25,20)),
+                                        text=f'{player.ship.cargo[item].qty}',
+                                        container=self,
+                                        manager=self.manager,
+                                        anchors={'top_target':self.buttons[item],
+                                                 'left_target':self.buttons[item]})
             i += 1
 
     def handle_event(self, event):

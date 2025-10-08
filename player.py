@@ -1,31 +1,25 @@
 from cities import City, Region
 from goods import *
 from statistics import mean
+from ships import *
 
 # How can I treat a player as a sprite?
 # Need to look at this
-
 class Player:
     def __init__(self, name, region: Region, city: City):
         self.name = name
         self.location = city
         self.region = region
         self.currency = 10_000
+        self.ship = Barca()
         self.health = 87
         self.energy = 92
         self.max_health = 100
         self.max_energy = 100
+        self.inventory_sz = 9
         self.inventory = {
             'Starting Dagger': {'value':100, 'dmg': 5, 'qty': 1}
             }
-        self.cargo = {
-            'Magical Tome': Product(name='Magical Tome', category=Category.MAGICAL_ITEMS, qty=100, value=90),
-            'Fine Jewelry': Product(name='Fine Jewelry', category=Category.JEWELRY, qty=12, value=60),
-            'Dark Crystals': Product(name='Dark Crystals', category=Category.MINERALS, qty=27, value=80)
-        }
-        self.cargo['Magical Tome'].cost = 30
-        self.cargo['Fine Jewelry'].cost = 80
-        self.cargo['Dark Crystals'].cost = 50
 
     def add_item(self, item):
         self.inventory.append(item)
@@ -33,17 +27,13 @@ class Player:
     def remove_item(self, item):
         self.inventory.remove(item)
 
-    def sell_cargo(self, product, price, qty):
+    def sell_cargo(self, product: Product, price: int, qty: int):
         price = round(price)
-        if product in self.cargo.keys():
-            if qty < self.cargo[product].qty:
-                self.cargo[product].qty -= qty
-            elif self.cargo[product].qty == qty or qty > self.cargo[product].qty:
-                qty = self.cargo[product].qty
-                del self.cargo[product]
+        qty = self.ship.remove_cargo(product, qty)
         self.currency += price * qty
-        print(f"{self.name} sold {qty} of {product} for a total of {price * qty}.")
 
+    # Need to move the limiting based on available gold to the 
+    # market screen to restrict the number that can be input
     def buy_cargo(self, product: Product, price: int, qty: int):
         '''
         Returns number of product purchased
@@ -53,18 +43,14 @@ class Player:
             qty = self.currency // price
             if qty == 0:
                 return
-        if product.name in self.cargo:
-            self.cargo[product.name].qty += qty
-            self.cargo[product.name].cost = (self.cargo[product.name].cost * self.cargo[product.name].qty + price * qty) / (self.cargo[product.name].qty + qty)
-        else:
-            self.cargo[product.name] = Product(name=product.name, category=product.category, qty=qty)
-            self.cargo[product.name].cost = price
+        qty = self.ship.add_cargo(product, price, qty)
         self.currency -= price * qty
-        print(f"{self.name} bought {qty} of {product.name} for a total of {price * qty}.")
         return qty
 
     def get_inventory(self):
         return self.inventory
-
-    def get_cargo(self):
-        return self.cargo
+    
+    def is_inventory_full(self):
+        if len(self.inventory.keys()) < self.inventory_sz:
+            return False
+        return True
