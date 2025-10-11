@@ -1,12 +1,20 @@
 from goods import *
 from constants import *
+import pygame
 
-class City():
-    def __init__(self, name, location, landmarks, products: list[Product] = []):
+class City(pygame.sprite.Sprite):
+    def __init__(self, name, coords: pygame.Vector2, landmarks: list, products: list[Product] = []):
+        super().__init__()
         self.name = name
-        self.location = location
+        self.coords = pygame.Vector2(*coords)
+        self.image = pygame.Surface((CITY_RADIUS*2,CITY_RADIUS*2), pygame.SRCALPHA)
+        self.rect = self.image.get_rect()
+        self.rect.x = coords[0]
+        self.rect.y = coords[1]
         self.landmarks = landmarks
         self.products = products
+
+        self.draw(self.image)
 
     def get_products(self):
         '''
@@ -21,6 +29,9 @@ class City():
         if product.name in self.products.keys():
             return int(self.products[product.name].value * IN_STOCK_VALUE_MODIFIER)
         return int(product.value * OUT_OF_STOCK_VALUE_MODIFIER)
+
+    def draw(self, screen):
+        return pygame.draw.circle(screen, 'black', (CITY_RADIUS//2, CITY_RADIUS//2), CITY_RADIUS)
 
 class Region:
     def __init__(self, name):
@@ -37,9 +48,9 @@ class Region:
         return self.cities.keys()
     
 Velmore = Region('Velmore')
-Velmore.cities['Viremontis'] = City("Viremontis", 
-                    (0, 0), 
-                    ["The Great Library", "Viremontis Castle", "The Crystal Lake"],
+Velmore.cities['Seville'] = City("Seville", 
+                    SEVILLE, 
+                    ["The Great Library", "Seville Castle", "The Crystal Lake"],
                     {'Magical Tome': Product(name='Magical Tome', category=Category.MAGICAL_ITEMS, value=90, qty=19),
                      'Enchanted Artifacts': Product(name='Enchanted Artifacts', category=Category.MAGICAL_ITEMS, value=70, qty=8),
                      'Silk Fabrics': Product(name='Silk Fabrics', category=Category.TEXTILES, value=30, qty=15),

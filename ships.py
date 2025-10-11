@@ -3,11 +3,15 @@ from typing import Dict
 from constants import *
 import pygame
 
-
-class Ship:
+class Ship(pygame.sprite.Sprite):
     def __init__(self, name, hp, speed, crew, price, cargo_sz, coords = (0,0), cargo_slots=12):
+        super().__init__()
         self.name = name
-        self.coords = coords
+        self.coords = pygame.Vector2(*coords)
+        self.velocity = pygame.Vector2(0, 0)
+        self.radius = PLAYER_RADIUS
+        self.turn_speed = 25
+        self.rotation = 0
         self.hp = hp
         self.speed = speed
         self.crew = crew
@@ -16,20 +20,44 @@ class Ship:
         self.cargo_sz = cargo_sz
         self.cargo_slots = cargo_slots
         self.cargo: Dict[str, Product]
+        self.width = 10
+        self.height = 20
+        self.timer = 0
 
     def move_speed(self):
         base = 500
         return int(base / self.speed)
 
-    def draw_ship(self, direction, coords: tuple, surface:pygame.Surface):
-        centre_x = coords[0]
-        centre_y = coords[1]
-        point1 = (centre_x, centre_y+10)
-        point2 = (centre_x-5,centre_y-10)
-        point3 = (centre_x+5,centre_y-10)
-        points = [point1, point2, point3]
-        
-        pygame.draw.polygon(surface, 'black', points)
+    def icon(self):
+        forward = pygame.Vector2(0, 1).rotate(self.rotation)
+        right = pygame.Vector2(0, 1).rotate(self.rotation + 90) * self.radius / 1.5
+        a = self.coords + forward * self.radius
+        b = self.coords - forward * self.radius - right
+        c = self.coords - forward * self.radius + right
+        return [a, b, c]
+
+    def draw(self, screen):
+        return pygame.draw.polygon(screen, 'black', self.icon(), 2)
+    
+    def rotate(self, dt):
+        self.rotation += self.turn_speed * dt       
+
+    def update(self, dt):
+        keys = pygame.key.get_pressed()
+        self.timer -= dt
+
+        if keys[pygame.K_LEFT]:
+            self.rotate(-dt)
+        if keys[pygame.K_RIGHT]:
+            self.rotate(dt)
+        if keys[pygame.K_UP]:
+            self.move(dt)
+        if keys[pygame.K_DOWN]:
+            self.move(-dt)
+
+    def move(self, dt):
+        forward = pygame.Vector2(0, 1).rotate(self.rotation)
+        self.coords += forward * self.speed * dt          
 
     def is_cargo_full(self):
         if len(self.cargo.keys()) < self.cargo_slots:
@@ -79,11 +107,11 @@ class Barca(Ship):
     def __init__(self):
         super().__init__(name = 'Barca',
                         hp = 15, 
-                        speed = 5, 
+                        speed = 10, 
                         crew = 7, 
                         price = 2_000, 
                         cargo_sz = 25)
-        self.coords = SEVILLE
+        self.coords = pygame.Vector2(*SEVILLE)
         self.cargo = {
             'Magical Tome': Product(name='Magical Tome', category=Category.MAGICAL_ITEMS, qty=8, value=90),
             'Fine Jewelry': Product(name='Fine Jewelry', category=Category.JEWELRY, qty=12, value=60),

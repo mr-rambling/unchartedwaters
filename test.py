@@ -1,54 +1,54 @@
 import pygame
 import random
 
-# Initialize Pygame
+# GLOBAL VARIABLES
+COLOR = (255, 100, 98)
+SURFACE_COLOR = (167, 255, 100)
+WIDTH = 500
+HEIGHT = 500
+
+# Object class
+class Sprite(pygame.sprite.Sprite):
+    def __init__(self, color, height, width):
+        super().__init__()
+
+        self.image = pygame.Surface([width, height])
+        self.image.fill(SURFACE_COLOR)
+        self.image.set_colorkey(COLOR)
+
+        pygame.draw.rect(self.image,color,pygame.Rect(0, 0, width, height))
+
+        self.rect = self.image.get_rect()
+
+
 pygame.init()
 
-# Screen dimensions
-SCREEN_WIDTH = 800
-SCREEN_HEIGHT = 600
-screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-pygame.display.set_caption("Random Tile Map")
+RED = (255, 0, 0)
 
-# Tile dimensions
-TILE_SIZE = 32
-GRID_WIDTH = SCREEN_WIDTH // TILE_SIZE
-GRID_HEIGHT = SCREEN_HEIGHT // TILE_SIZE
+size = (WIDTH, HEIGHT)
+screen = pygame.display.set_mode(size)
+pygame.display.set_caption("Creating Sprite")
 
-# Tile colors (example)
-GRASS_COLOR = (0, 150, 0)
-WATER_COLOR = (0, 0, 150)
-MOUNTAIN_COLOR = (100, 100, 100)
+all_sprites_list = pygame.sprite.Group()
 
-# Generate a random map
-game_map = []
-for y in range(GRID_HEIGHT):
-    row = []
-    for x in range(GRID_WIDTH):
-        tile_type = random.choice(["grass", "water", "mountain"])
-        row.append(tile_type)
-    game_map.append(row)
+object_ = Sprite(RED, 20, 30)
+object_.rect.x = 200
+object_.rect.y = 300
 
-# Game loop
-running = True
-while running:
+all_sprites_list.add(object_)
+
+exit = True
+clock = pygame.time.Clock()
+
+while exit:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
-            running = False
+            exit = False
 
-    # Draw the map
-    screen.fill((0, 0, 0)) # Clear screen
-    for y in range(GRID_HEIGHT):
-        for x in range(GRID_WIDTH):
-            tile_type = game_map[y][x]
-            rect = pygame.Rect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
-            if tile_type == "grass":
-                pygame.draw.rect(screen, GRASS_COLOR, rect)
-            elif tile_type == "water":
-                pygame.draw.rect(screen, WATER_COLOR, rect)
-            elif tile_type == "mountain":
-                pygame.draw.rect(screen, MOUNTAIN_COLOR, rect)
-
+    all_sprites_list.update()
+    screen.fill(SURFACE_COLOR)
+    all_sprites_list.draw(screen)
     pygame.display.flip()
+    clock.tick(60)
 
 pygame.quit()

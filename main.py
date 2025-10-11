@@ -1,5 +1,6 @@
 from cities import City, Region, Velmore
 from player import Player
+from ships import Ship
 from constants import *
 import pygame
 import pygame_gui
@@ -557,16 +558,15 @@ class SailingScreen(GameScreen):
         super().__init__(screen)
     
         # Load your 2D world map image
-        image_path = "MapChart_Map.png"  # Change this to your image file
+        image_path = "images/MapChart_Map.png"  # Change this to your image file
         image = pygame.image.load(image_path)
 
         # Convert image to a pixel array (Surface to array)
-        pixel_array = pygame.surfarray.array3d(image)
-        self.surface = pygame.surfarray.make_surface(pixel_array)
+        self.pixel_array = pygame.surfarray.array3d(image)
+        self.map = pygame.surfarray.make_surface(self.pixel_array)
         self.left = player.ship.coords[0]
         self.top = player.ship.coords[1]
         self.viewport = self.centre_viewport(*SEVILLE, SCREEN_WIDTH, SCREEN_HEIGHT)
-        pygame.key.set_repeat(1, player.ship.move_speed())
 
     def centre_viewport(self, x, y, viewport_x, viewport_y):
         '''
@@ -591,6 +591,7 @@ class SailingScreen(GameScreen):
             if event.ui_element == self.character_button:         
                 self.char_sheet = CharScreen('Character', self.manager, CHAR_SHEET_SIZE)   
                 self.char_sheet.is_active = True
+        '''
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_RIGHT:
                 self.left += 1
@@ -601,13 +602,25 @@ class SailingScreen(GameScreen):
             if event.key == pygame.K_UP:
                 self.top -= 1
             self.viewport = self.centre_viewport(self.left, self.top, SCREEN_WIDTH, SCREEN_HEIGHT)
-
+        '''
+            
     def mainloop(self):
         self.is_running = True
         self.objects()
 
+        updatable = pygame.sprite.Group()
+        drawable = pygame.sprite.Group()
+        ships = pygame.sprite.Group()
+        cities = pygame.sprite.Group()
+
+        ships.add(player.ship)
+        for city in Velmore.cities.values():
+            cities.add(city)
+
         while self.is_running:
-            time_delta = self.clock.tick(60)/1000.0
+            # limit the frame rate to 60 fps
+            time_delta = self.clock.tick(60) / 1000
+
             for event in pygame.event.get(): 
                 if event.type == pygame.QUIT:
                     self.is_running = False
@@ -617,18 +630,29 @@ class SailingScreen(GameScreen):
                 self.handle_event(event)
                 self.manager.process_events(event)    
 
-            self.manager.update(time_delta)
+            # UI Elements
             self.update_gold()
-            player.ship.draw_ship(0, SEVILLE, self.surface)
+            self.manager.update(time_delta)
 
-            self.screen.fill((0,0,0))
-            self.screen.blit(self.surface, (0,0), self.viewport)
+            # Update
+            ships.update(time_delta)
+            cities.update(time_delta)
+
+            # Render
+            self.screen.fill((255,255,255))
+            self.map = pygame.surfarray.make_surface(self.pixel_array)
+            '''can't do sprite group draw without a sprite self.image and self.rect'''
+            player.ship.draw(self.map)
+            cities.draw(self.map)
+
+            # Add map viewport
+            self.viewport = self.centre_viewport(*player.ship.coords, SCREEN_WIDTH, SCREEN_HEIGHT)
+            self.screen.blit(source=self.map, dest=(0,0), area=self.viewport)
+
             self.manager.draw_ui(self.screen)
 
             # updates the frames of the game
             pygame.display.update() 
-
-        pygame.key.set_repeat() 
 
 class PopUpScreen(UIWindow):
     def __init__(self, name: str, manager: pygame_gui.UIManager, size: tuple):
