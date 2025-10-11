@@ -1,5 +1,9 @@
+# Current Status
+This has spiraled rapidly out of control. What began as a simple text adventure with a basic interaction tree suddenly possesses a GUI sailing interface, inventory and placeholder character screen. I will submit the current workable state despite the bugs and continue it as a WIP. 
+
 # Goal
-This will be an attempt to reproduce some of the trading functionality of the MMO Uncharted Waters Online for my Boot.dev personal project.
+This has instead turned into me attempting to replicate the entire MMO UNcharted Waters Online as a single player experience. At least the gameplay, the art is beyond me. For now it shall remain a 2D game of basic polgons.
+~~This will be an attempt to reproduce some of the trading functionality of the MMO Uncharted Waters Online for my Boot.dev personal project.~~
 
 1. ~~Establish five fictional cities with semi-unique goods. Categorise these goods into general archtypes~~
  - This spiraled. A City() class has been built to easily add additional cities.
@@ -17,9 +21,6 @@ This will be an attempt to reproduce some of the trading functionality of the MM
 11. AI generated talk from your ships crew each day at sea
 12. PvE events while travelling
 13. Add save and load game functionality. Placeholder buttons currently exist.
-
-# Current Status
-This has spiraled rapidly out of control. What began as a simple text adventure with a basic interaction tree suddenly possesses a GUI sailing interface, inventory and placeholder character screen. I will submit the current workable state despite the bugs and continue it as a WIP. 
 
 # How to Use
 1. Clone the repository:
