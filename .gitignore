@@ -11,4 +11,4 @@ example_pygame_gui/
 .venv
 
 # User generated files
-# data/landcheck.pkl
+data/landcheck.pkl
