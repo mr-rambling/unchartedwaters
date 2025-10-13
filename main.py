@@ -1,17 +1,21 @@
-from cities import City, Region, Velmore
+from cities import City, Velmore
 from player import Player
-from ships import Ship
 from constants import *
+import landcheck
 import pygame
 import pygame_gui
 import sys
 import copy
-import pickle
+import os, pickle
 from pygame_gui.elements.ui_window import UIWindow
 from pygame_gui.elements.ui_label import UILabel
 from pygame_gui.elements.ui_button import UIButton
 from pygame_gui.elements.ui_text_entry_line import UITextEntryLine
 from typing import Dict
+
+# Create landcheck list
+if not os.path.exists('data/landcheck.pkl'):
+    landcheck.create()
 
 # default player
 player = Player('I was too lazy to change from Default', Velmore, Velmore.cities['Seville'])

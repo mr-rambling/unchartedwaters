@@ -9,3 +9,6 @@ example_pygame_gui/
 
 # Virtual environments
 .venv
+
+# User generated files
+data/landcheck.pkl

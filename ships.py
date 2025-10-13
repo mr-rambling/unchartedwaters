@@ -1,7 +1,12 @@
 from goods import *
 from typing import Dict
 from constants import *
-import pygame, pickle
+import pygame, pickle, os
+import landcheck
+
+# Create landcheck list
+if not os.path.exists('data/landcheck.pkl'):
+    landcheck.create()
 
 with open('data/landcheck.pkl', 'rb') as file:
     land = pickle.load(file)
