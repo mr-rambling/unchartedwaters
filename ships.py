@@ -1,7 +1,10 @@
 from goods import *
 from typing import Dict
 from constants import *
-import pygame
+import pygame, pickle
+
+with open('data/landcheck.pkl', 'rb') as file:
+    land = pickle.load(file)
 
 class Ship(pygame.sprite.Sprite):
     def __init__(self, name, hp, speed, crew, price, cargo_sz, coords = (0,0), cargo_slots=12):
@@ -10,9 +13,11 @@ class Ship(pygame.sprite.Sprite):
         self.coords = pygame.Vector2(*coords)
         self.velocity = pygame.Vector2(0, 0)
         self.radius = PLAYER_RADIUS
+        self.interact_radius = PLAYER_INTERACT_RADIUS
         self.turn_speed = 25
         self.rotation = 0
-        self.hp = hp
+        self.health_capacity = hp
+        self.current_health = hp
         self.speed = speed
         self.crew = crew
         self.price = price
@@ -23,6 +28,7 @@ class Ship(pygame.sprite.Sprite):
         self.width = 10
         self.height = 20
         self.timer = 0
+        self.last_grounded = 0
 
     def move_speed(self):
         base = 500
@@ -44,7 +50,8 @@ class Ship(pygame.sprite.Sprite):
 
     def update(self, dt):
         keys = pygame.key.get_pressed()
-        self.timer -= dt
+        self.timer += dt
+        self.last_grounded += dt
 
         if keys[pygame.K_LEFT]:
             self.rotate(-dt)
@@ -57,7 +64,19 @@ class Ship(pygame.sprite.Sprite):
 
     def move(self, dt):
         forward = pygame.Vector2(0, 1).rotate(self.rotation)
-        self.coords += forward * self.speed * dt          
+        coords_x, coords_y = self.coords + forward * self.speed * dt
+
+        if land[round(coords_x)][round(coords_y)]:
+            if self.last_grounded > GROUNDED_TIMER:
+                self.current_health -= self.health_capacity * 0.2
+                self.last_grounded = 0
+            return
+        self.coords = pygame.Vector2((coords_x, coords_y))
+
+    def collision(self, other):
+        if self.coords.distance_to(other.coords) <= (self.interact_radius + other.interact_radius):
+            return True
+        return False
 
     def is_cargo_full(self):
         if len(self.cargo.keys()) < self.cargo_slots:
@@ -111,7 +130,6 @@ class Barca(Ship):
                         crew = 7, 
                         price = 2_000, 
                         cargo_sz = 25)
-        self.coords = pygame.Vector2(*SEVILLE)
         self.cargo = {
             'Magical Tome': Product(name='Magical Tome', category=Category.MAGICAL_ITEMS, qty=8, value=90),
             'Fine Jewelry': Product(name='Fine Jewelry', category=Category.JEWELRY, qty=12, value=60),

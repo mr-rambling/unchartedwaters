@@ -20,6 +20,7 @@ class Product(Item):
         self.qty = qty
         self.cost = 0
         self.category: Category = category
+        self.max_qty = qty
 
 class Equipment(Item):
     def __init__(self, name, value, durability):

@@ -6,7 +6,7 @@ import numpy as np
 width, height = 1080, 720
 
 # Load your 2D world map image
-image_path = "MapChart_Map.png"  # Change this to your image file
+image_path = "images/MapChart_Map.png"  # Change this to your image file
 image = pygame.image.load(image_path)
 
 # Convert image to a pixel array (Surface to array)

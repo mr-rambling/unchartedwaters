@@ -5,6 +5,8 @@ from constants import *
 import pygame
 import pygame_gui
 import sys
+import copy
+import pickle
 from pygame_gui.elements.ui_window import UIWindow
 from pygame_gui.elements.ui_label import UILabel
 from pygame_gui.elements.ui_button import UIButton
@@ -12,7 +14,7 @@ from pygame_gui.elements.ui_text_entry_line import UITextEntryLine
 from typing import Dict
 
 # default player
-player = Player('I was too lazy to change from Default', Velmore, Velmore.cities['Viremontis'])
+player = Player('I was too lazy to change from Default', Velmore, Velmore.cities['Seville'])
 
 # Contains base state of game options
 class Options():
@@ -259,6 +261,12 @@ class CityScreen(GameScreen):
                                                     relative_rect=pygame.Rect(0, 100, 400, 100),
                                                     manager=self.manager,
                                                     anchors={'centerx': 'centerx'})
+        if player.ship.current_health <= 0:
+            player.ship.current_health = round(0.5 * player.ship.health_capacity)
+            cost = round(player.currency * 0.1)
+            player.currency -= cost
+            self.NPC_speech.set_text(f'Your ship has reached 0 durability, you have sunk.\nWe have repaired your ship to {player.ship.current_health} durability for {cost} gold.')
+
         self.market_button = pygame_gui.elements.UIButton(relative_rect=pygame.Rect((0,275), (300, 50)),
                                                     text = 'Market',
                                                     manager=self.manager,
@@ -327,7 +335,8 @@ class ShopScreen(GameScreen):
             if event.ui_element == self.sell_button:
                 SellScreen(self.screen, self.city).mainloop()
             if event.ui_element == self.exit_button: 
-                self.is_running = False       
+                self.is_running = False    
+                CityScreen(self.screen, self.city).mainloop()
 
 class SellScreen(GameScreen):
     def __init__(self, screen, city):
@@ -521,52 +530,35 @@ class PortScreen(GameScreen):
 
     def objects(self):
         super().objects()        
-        item_size = (100, 100)
-        spacing = 150
-        top_spacing = 200
-        i = 0
-        for city in Velmore.cities:
-            if i == 4:
-                i = 0
-                top_spacing += spacing
-            self.locations[city] = pygame_gui.elements.UIButton(relative_rect=pygame.Rect(300+i*spacing, top_spacing, *item_size),
-                                                            text = city,
-                                                            manager=self.manager)
-            i += 1
-
-        self.exit_button = pygame_gui.elements.UIButton(relative_rect=pygame.Rect((0,500), (100, 50)),
+        self.sail_button = pygame_gui.elements.UIButton(relative_rect=pygame.Rect((0,275), (100, 50)),
+                                                        text = 'Set Sail',
+                                                        manager=self.manager,
+                                                    anchors={'centerx': 'centerx'})
+        self.exit_button = pygame_gui.elements.UIButton(relative_rect=pygame.Rect((0,20), (100, 50)),
                                                     text = 'Leave',
                                                     manager=self.manager,
-                                                    anchors={'centerx': 'centerx'})        
+                                                    anchors={'centerx': 'centerx',
+                                                             'top_target': self.sail_button})        
     def handle_event(self, event):
         super().handle_event(event)
         if event.type == pygame_gui.UI_BUTTON_PRESSED:
             if event.ui_element == self.exit_button: 
                 self.is_running = False  
-            if event.ui_element in self.locations.values():
+            if event.ui_element == self.sail_button:
+                self.is_running = False
                 SailingScreen(self.screen).mainloop()
-                #CityScreen(self.screen, Velmore.cities[event.ui_element.text]).mainloop()
-                #player.location = Velmore.cities[event.ui_element.text]
 
-# This is pretty ambitious. Generate a map of the coastline and cities
-# with a moving dot (arrow?) for the current location
 # start with just generating random events
 # implement food requirement
-# need to map hp to ship in this screen
 class SailingScreen(GameScreen):
     def __init__(self, screen):
         super().__init__(screen)
-    
-        # Load your 2D world map image
-        image_path = "images/MapChart_Map.png"  # Change this to your image file
-        image = pygame.image.load(image_path)
 
-        # Convert image to a pixel array (Surface to array)
-        self.pixel_array = pygame.surfarray.array3d(image)
-        self.map = pygame.surfarray.make_surface(self.pixel_array)
         self.left = player.ship.coords[0]
         self.top = player.ship.coords[1]
         self.viewport = self.centre_viewport(*SEVILLE, SCREEN_WIDTH, SCREEN_HEIGHT)
+        self.mouse_x, self.mouse_y = 0, 0
+        self.color = pygame.Color(255,255,255)
 
     def centre_viewport(self, x, y, viewport_x, viewport_y):
         '''
@@ -603,13 +595,54 @@ class SailingScreen(GameScreen):
                 self.top -= 1
             self.viewport = self.centre_viewport(self.left, self.top, SCREEN_WIDTH, SCREEN_HEIGHT)
         '''
-            
+
+    def objects(self):
+        self.inventory_button = pygame_gui.elements.UIButton(relative_rect=pygame.Rect((-150,20), (100, 30)),
+                                                    text = 'Inventory',
+                                                    manager=self.manager,
+                                                    anchors={'right':'right'})
+        self.cargo_button = pygame_gui.elements.UIButton(relative_rect=pygame.Rect((-100,20), (100, 30)),
+                                                    text = 'Cargo',
+                                                    manager=self.manager,
+                                                    anchors={'right':'right',
+                                                             'right_target':self.inventory_button})
+        self.character_button = pygame_gui.elements.UIButton(relative_rect=pygame.Rect((-100,20), (100, 30)),
+                                                    text = 'Character',
+                                                    manager=self.manager,
+                                                    anchors={'right':'right',
+                                                             'right_target':self.cargo_button})
+        self.currency = pygame_gui.elements.UILabel(text=f'Gold: {player.currency}',
+                                                    relative_rect=pygame.Rect((50, 25), (100, 25)),
+                                                    manager=self.manager,
+                                                    anchors={'left': 'left'})
+        self.ship_durability = pygame_gui.elements.UIScreenSpaceHealthBar(relative_rect=pygame.Rect((50, 25), (200, 25)),
+                                                                        manager=self.manager,
+                                                                        anchors={'left': 'left',
+                                                                        'top_target': self.currency})
+        self.ship_durability.set_sprite_to_monitor(player.ship)
+        self.player_energy = pygame_gui.elements.UIScreenSpaceHealthBar(relative_rect=pygame.Rect((50, 25), (200, 25)),
+                                                                        manager=self.manager,
+                                                                        anchors={'left': 'left',
+                                                                        'top_target': self.ship_durability})
+        self.player_energy.bar_filled_colour = 'blue'
+        self.coordinates = pygame_gui.elements.UILabel(text=f'Mouse coords: {self.mouse_x}, {self.mouse_y}',
+                                                        relative_rect=pygame.Rect((-225, -50), (200, 25)),
+                                                        manager=self.manager,
+                                                        anchors={'right': 'right',
+                                                                 'bottom': 'bottom'})       
+        self.color_label = pygame_gui.elements.UILabel(text=f'Color: {self.color}',
+                                                        relative_rect=pygame.Rect((-245, -20), (220, 25)),
+                                                        manager=self.manager,
+                                                        anchors={'right': 'right',
+                                                                 'bottom': 'bottom',
+                                                                 'bottom_target': self.coordinates})
+ 
     def mainloop(self):
         self.is_running = True
+        player.prev_location = player.location
+        player.ship.coords = pygame.Vector2(*player.location.harbour)
         self.objects()
 
-        updatable = pygame.sprite.Group()
-        drawable = pygame.sprite.Group()
         ships = pygame.sprite.Group()
         cities = pygame.sprite.Group()
 
@@ -619,7 +652,7 @@ class SailingScreen(GameScreen):
 
         while self.is_running:
             # limit the frame rate to 60 fps
-            time_delta = self.clock.tick(60) / 1000
+            dt = self.clock.tick(60) / 1000
 
             for event in pygame.event.get(): 
                 if event.type == pygame.QUIT:
@@ -630,24 +663,47 @@ class SailingScreen(GameScreen):
                 self.handle_event(event)
                 self.manager.process_events(event)    
 
+            for city in cities:
+                if player.ship.collision(city) and player.location != city:
+                    player.location = city
+                    self.is_running = False
+                    CityScreen(self.screen, city).mainloop()
+                if not player.ship.collision(city) and player.location == city:
+                    player.location = None
+                    city.reset_market()
+
+            if player.ship.current_health <= 0:
+                self.is_running = False
+                player.location = player.prev_location
+                player.ship.coords = player.location.coords
+                player.ship.rotation = 0
+                CityScreen(self.screen, player.location).mainloop()
+
             # UI Elements
             self.update_gold()
-            self.manager.update(time_delta)
+            self.manager.update(dt)
 
             # Update
-            ships.update(time_delta)
-            cities.update(time_delta)
+            ships.update(dt)
+            cities.update(dt)
 
             # Render
             self.screen.fill((255,255,255))
-            self.map = pygame.surfarray.make_surface(self.pixel_array)
+            bg = copy.copy(gamemap)
             '''can't do sprite group draw without a sprite self.image and self.rect'''
-            player.ship.draw(self.map)
-            cities.draw(self.map)
+            player.ship.draw(bg)
+            cities.draw(bg)
 
             # Add map viewport
             self.viewport = self.centre_viewport(*player.ship.coords, SCREEN_WIDTH, SCREEN_HEIGHT)
-            self.screen.blit(source=self.map, dest=(0,0), area=self.viewport)
+            self.screen.blit(source=bg, dest=(0,0), area=self.viewport)
+
+            # Get the current mouse position
+            self.mouse_x, self.mouse_y = pygame.mouse.get_pos()
+            self.mouse_x += self.viewport.left
+            self.mouse_y += self.viewport.top
+            self.coordinates.set_text(f'Mouse coords: {self.mouse_x}, {self.mouse_y}')
+            self.color_label.set_text(f'Color: {bg.get_at((self.mouse_x, self.mouse_y))}')
 
             self.manager.draw_ui(self.screen)
 
@@ -781,10 +837,20 @@ class CargoScreen(PopUpScreen):
                 qty_held += min(qty_owned, 10)
 
 def main():
+    global gamemap, land
     pygame.init()
     pygame.display.set_caption('Trader')
     options = Options()
     screen = pygame.display.set_mode(options.resolution)
+
+    with open('data/landcheck.pkl', 'rb') as file:
+        land = pickle.load(file)
+
+    # Generate map
+    image_path = "images/MapChart_Map.png"
+    image = pygame.image.load(image_path)
+    pixel_array = pygame.surfarray.array3d(image)
+    gamemap = pygame.surfarray.make_surface(pixel_array)
 
     StartScreen(screen).mainloop()
 

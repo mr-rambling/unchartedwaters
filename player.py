@@ -8,7 +8,7 @@ from ships import *
 class Player:
     def __init__(self, name, region: Region, city: City):
         self.name = name
-        self.location = city
+        self.location: City = city
         self.region = region
         self.currency = 10_000
         self.ship = Barca()
@@ -20,6 +20,7 @@ class Player:
         self.inventory = {
             'Starting Dagger': {'value':100, 'dmg': 5, 'qty': 1}
             }
+        self.prev_location = None
 
     def add_item(self, item):
         self.inventory.append(item)
