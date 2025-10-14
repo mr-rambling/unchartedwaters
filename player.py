@@ -12,10 +12,10 @@ class Player:
         self.region = region
         self.currency = 10_000
         self.ship = Barca()
-        self.health = 87
-        self.energy = 92
-        self.max_health = 100
-        self.max_energy = 100
+        self.current_health = 87
+        self.current_energy = 92
+        self.health_capacity = 100
+        self.energy_capacity = 100
         self.inventory_sz = 9
         self.inventory = {
             'Starting Dagger': {'value':100, 'dmg': 5, 'qty': 1}

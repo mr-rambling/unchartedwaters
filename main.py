@@ -1,12 +1,9 @@
-from cities import City, Velmore
+from cities import City, WestEurope
 from player import Player
 from constants import *
 import landcheck
-import pygame
-import pygame_gui
-import sys
-import copy
-import os, pickle
+import pygame, pygame_gui
+import sys, copy, os, pickle, math
 from pygame_gui.elements.ui_window import UIWindow
 from pygame_gui.elements.ui_label import UILabel
 from pygame_gui.elements.ui_button import UIButton
@@ -18,7 +15,7 @@ if not os.path.exists('data/landcheck.pkl'):
     landcheck.create()
 
 # default player
-player = Player('I was too lazy to change from Default', Velmore, Velmore.cities['Seville'])
+player = Player('I was too lazy to change from Default', WestEurope, WestEurope.cities['Seville'])
 
 # Contains base state of game options
 class Options():
@@ -71,6 +68,7 @@ class Stage():
 # Need to figure out load mechanics. 
 # Load is currently non-functional
 # Can likely just save player state to a txt file
+# can probs use pickle for this
 class StartScreen(Stage):
     def __init__(self, screen):
         super().__init__(screen)
@@ -146,7 +144,7 @@ class NewGameScreen(Stage):
                 self.is_running = False
                 if self.player_name.text != '':
                     global player 
-                    player = Player(f'{self.player_name.text}', Velmore, Velmore.cities['Viremontis'])
+                    player = Player(f'{self.player_name.text}', WestEurope, WestEurope.cities['Viremontis'])
                 CityScreen(self.screen, player.location).mainloop()
             if event.ui_element == self.exit_button:
                 self.is_running = False   
@@ -526,7 +524,6 @@ class BuyScreen(GameScreen):
             if event.ui_element == self.exit_button:
                 self.is_running = False
 
-# Need to fix spacing
 class PortScreen(GameScreen):
     def __init__(self, screen):
         super().__init__(screen)
@@ -560,7 +557,8 @@ class SailingScreen(GameScreen):
 
         self.left = player.ship.coords[0]
         self.top = player.ship.coords[1]
-        self.viewport = self.centre_viewport(*SEVILLE, SCREEN_WIDTH, SCREEN_HEIGHT)
+        self.viewport = self.centre_viewport(*player.location.coords, SCREEN_WIDTH, SCREEN_HEIGHT)
+        self.region = player.region
         self.mouse_x, self.mouse_y = 0, 0
         self.color = pygame.Color(255,255,255)
 
@@ -645,13 +643,19 @@ class SailingScreen(GameScreen):
         self.is_running = True
         player.prev_location = player.location
         player.ship.coords = pygame.Vector2(*player.location.harbour)
+
+        ship_harbour_angle = get_angle_between_points(player.location.coords.x, 
+                                                        player.location.coords.y,
+                                                        player.location.harbour.x,
+                                                        player.location.harbour.y)
+        player.ship.reset_angle(ship_harbour_angle)
         self.objects()
 
         ships = pygame.sprite.Group()
         cities = pygame.sprite.Group()
 
         ships.add(player.ship)
-        for city in Velmore.cities.values():
+        for city in self.region.cities.values():
             cities.add(city)
 
         while self.is_running:
@@ -694,8 +698,7 @@ class SailingScreen(GameScreen):
             # Render
             self.screen.fill((255,255,255))
             bg = copy.copy(gamemap)
-            '''can't do sprite group draw without a sprite self.image and self.rect'''
-            player.ship.draw(bg)
+            ships.draw(bg)
             cities.draw(bg)
 
             # Add map viewport
@@ -839,6 +842,24 @@ class CargoScreen(PopUpScreen):
                 qty_held = qty_owned
             if event.key == (pygame.K_LALT or pygame.K_RALT):
                 qty_held += min(qty_owned, 10)
+
+def get_angle_between_points(x1, y1, x2, y2):
+    """
+    Calculates the angle (in degrees) of the line segment from (x1, y1) to (x2, y2)
+    relative to the positive x-axis.
+
+    Args:
+        x1, y1: Coordinates of the first point.
+        x2, y2: Coordinates of the second point.
+
+    Returns:
+        The angle in degrees, ranging from -180 to 180.
+    """
+    dx = x2 - x1
+    dy = y2 - y1
+    angle_radians = math.atan2(dy, dx)
+    angle_degrees = math.degrees(angle_radians)
+    return angle_degrees
 
 def main():
     global gamemap, land

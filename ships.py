@@ -15,12 +15,25 @@ class Ship(pygame.sprite.Sprite):
     def __init__(self, name, hp, speed, crew, price, cargo_sz, coords = (0,0), cargo_slots=12):
         super().__init__()
         self.name = name
+
+        # Position
         self.coords = pygame.Vector2(*coords)
-        self.velocity = pygame.Vector2(0, 0)
-        self.radius = PLAYER_RADIUS
-        self.interact_radius = PLAYER_INTERACT_RADIUS
-        self.turn_speed = 25
+        self.direction = pygame.Vector2((0, -1))
         self.rotation = 0
+        self.radius = SHIP_RADIUS
+
+        # Image
+        self.image = pygame.Surface((self.radius,self.radius), pygame.SRCALPHA)
+        self.image.fill('white')
+        self.image.set_colorkey('white')
+        self.icon(self.image)
+        self.image_org = self.image.copy()
+        self.rect = self.image.get_rect(center=self.coords)
+
+        self.interact_radius = PLAYER_INTERACT_RADIUS
+        self.turn_speed = 25 # turn speed in degrees per second
+
+        # Stats
         self.health_capacity = hp
         self.current_health = hp
         self.speed = speed
@@ -30,53 +43,53 @@ class Ship(pygame.sprite.Sprite):
         self.cargo_sz = cargo_sz
         self.cargo_slots = cargo_slots
         self.cargo: Dict[str, Product]
-        self.width = 10
-        self.height = 20
+
         self.timer = 0
         self.last_grounded = 0
 
-    def move_speed(self):
-        base = 500
-        return int(base / self.speed)
-
-    def icon(self):
-        forward = pygame.Vector2(0, 1).rotate(self.rotation)
-        right = pygame.Vector2(0, 1).rotate(self.rotation + 90) * self.radius / 1.5
-        a = self.coords + forward * self.radius
-        b = self.coords - forward * self.radius - right
-        c = self.coords - forward * self.radius + right
-        return [a, b, c]
-
-    def draw(self, screen):
-        return pygame.draw.polygon(screen, 'black', self.icon(), 2)
+    def icon(self, screen):
+        # adjust for indexing from 0
+        adj_radius = self.radius -1
+        a = (adj_radius/2, 0)
+        b = (adj_radius/4, adj_radius)
+        c = (self.radius - adj_radius/4, adj_radius)
+        return pygame.draw.polygon(screen, 'black', (a,b,c), 2)
     
-    def rotate(self, dt):
-        self.rotation += self.turn_speed * dt       
-
     def update(self, dt):
         keys = pygame.key.get_pressed()
         self.timer += dt
         self.last_grounded += dt
+        movement = 0
 
         if keys[pygame.K_LEFT]:
-            self.rotate(-dt)
+            self.direction.rotate_ip(dt*-self.turn_speed)
+            self.rotation += dt*-self.turn_speed
         if keys[pygame.K_RIGHT]:
-            self.rotate(dt)
+            self.direction.rotate_ip(dt*self.turn_speed)
+            self.rotation += dt*self.turn_speed
         if keys[pygame.K_UP]:
-            self.move(dt)
+            movement = 1
         if keys[pygame.K_DOWN]:
-            self.move(-dt)
+            movement = -1
 
-    def move(self, dt):
-        forward = pygame.Vector2(0, 1).rotate(self.rotation)
-        coords_x, coords_y = self.coords + forward * self.speed * dt
+        velocity = self.direction * movement
+        if velocity.length() > 0:
+            velocity.normalize_ip()
+            self.coords += velocity * dt * self.speed
 
-        if land[round(coords_x)][round(coords_y)]:
+        self.image = pygame.transform.rotate(self.image_org, self.direction.angle_to((0,-1)))
+        self.rect = self.image.get_rect(center=self.coords)  
+
+        if land[round(self.coords.x)][round(self.coords.y)]:
             if self.last_grounded > GROUNDED_TIMER:
                 self.current_health -= self.health_capacity * 0.2
                 self.last_grounded = 0
-            return
-        self.coords = pygame.Vector2((coords_x, coords_y))
+
+    def reset_angle(self, angle):
+        self.direction.rotate_ip(-self.rotation)
+        # account for drawn angle
+        self.rotation = angle+90
+        self.direction.rotate_ip(angle+90)
 
     def collision(self, other):
         if self.coords.distance_to(other.coords) <= (self.interact_radius + other.interact_radius):
